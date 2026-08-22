@@ -45,36 +45,36 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
-        <div className="text-center">
-          <div className="flex justify-center text-blue-600">
-            <Compass className="h-12 w-12" />
+    <div className="min-h-screen flex items-center justify-center bg-paper py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-paper border border-sand p-8 rounded-xl shadow-sm">
+        <div className="text-center space-y-2">
+          <div className="flex justify-center text-coral">
+            <Compass className="h-10 w-10" />
           </div>
-          <h2 className="mt-4 text-3xl font-extrabold text-gray-900">Create Account</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Join TripPilot to begin planning multi-city routes
+          <h2 className="mt-2 text-3xl font-editorial font-bold text-charcoal">Begin the Journey</h2>
+          <p className="text-xs text-charcoal-muted uppercase tracking-wider">
+            Join TripPilot to organize multi-city itineraries
           </p>
         </div>
 
         {error && (
-          <div className="flex items-center space-x-2 bg-red-50 border-l-4 border-red-500 text-red-700 p-3 rounded text-sm">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+          <div className="flex items-center space-x-2 bg-coral/5 border-l-2 border-coral text-coral p-3 rounded text-xs animate-fadeIn">
+            <AlertCircle className="h-4.5 w-4.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="flex items-center space-x-2 bg-green-50 border-l-4 border-green-500 text-green-700 p-3 rounded text-sm">
-            <CheckCircle className="h-5 w-5 shrink-0" />
+          <div className="flex items-center space-x-2 bg-green-50 border-l-2 border-green-500 text-green-700 p-3 rounded text-xs animate-fadeIn">
+            <CheckCircle className="h-4.5 w-4.5 shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="user-name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="user-name" className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
                 Full Name
               </label>
               <input
@@ -84,12 +84,12 @@ export const Register: React.FC = () => {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="w-full px-3 py-2 border border-sand rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                 placeholder="John Doe"
               />
             </div>
             <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email-address" className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
                 Email Address
               </label>
               <input
@@ -99,12 +99,12 @@ export const Register: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="w-full px-3 py-2 border border-sand rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                 placeholder="john@example.com"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
                 Password
               </label>
               <input
@@ -114,7 +114,7 @@ export const Register: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="w-full px-3 py-2 border border-sand rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                 placeholder="At least 6 characters"
               />
             </div>
@@ -124,7 +124,7 @@ export const Register: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
+              className="w-full flex justify-center py-2.5 px-4 text-xs font-bold uppercase tracking-wider rounded text-paper bg-teal hover:bg-teal-hover transition-colors disabled:opacity-50 shadow-sm"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
@@ -132,9 +132,9 @@ export const Register: React.FC = () => {
         </form>
 
         <div className="text-center mt-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-charcoal-muted">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+            <Link to="/login" className="font-bold text-coral hover:text-coral-hover transition-colors">
               Sign in
             </Link>
           </p>

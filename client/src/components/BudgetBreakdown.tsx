@@ -50,17 +50,18 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ tripId, refres
     return Math.round((value / total) * 100);
   };
 
+  // Color config using the design system palette
   const categoryConfig: Record<string, { label: string; color: string; bg: string }> = {
-    transport: { label: 'Transport', color: 'bg-blue-500', bg: 'bg-blue-50' },
-    stay: { label: 'Stay', color: 'bg-purple-500', bg: 'bg-purple-50' },
-    activity: { label: 'Activities', color: 'bg-orange-500', bg: 'bg-orange-50' },
-    meal: { label: 'Meals', color: 'bg-green-500', bg: 'bg-green-50' },
-    other: { label: 'Others', color: 'bg-gray-500', bg: 'bg-gray-50' },
+    transport: { label: 'Transport', color: 'bg-teal', bg: 'bg-teal/5' },
+    stay: { label: 'Stay & Lodging', color: 'bg-coral', bg: 'bg-coral/5' },
+    activity: { label: 'Activities', color: 'bg-charcoal', bg: 'bg-charcoal/5' },
+    meal: { label: 'Meals & Dining', color: 'bg-sand', bg: 'bg-sand-light' },
+    other: { label: 'Others', color: 'bg-gray-400', bg: 'bg-gray-100' },
   };
 
   if (error) {
     return (
-      <div className="bg-red-50 text-red-700 text-xs p-4 rounded-xl border border-red-100 flex items-center space-x-2">
+      <div className="bg-coral/5 text-coral text-xs p-4 rounded-xl border border-coral/20 flex items-center space-x-2">
         <Info className="h-4.5 w-4.5" />
         <span>{error}</span>
       </div>
@@ -68,68 +69,69 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ tripId, refres
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-        <h2 className="text-lg font-bold text-gray-900 flex items-center space-x-2">
-          <PieChart className="h-5 w-5 text-blue-600" />
-          <span>Trip Cost Breakdown</span>
+    <div className="bg-paper rounded-xl border border-sand p-6 space-y-6">
+      <div className="flex items-center justify-between border-b border-sand pb-3">
+        <h2 className="text-base font-bold text-charcoal flex items-center space-x-2">
+          <PieChart className="h-4.5 w-4.5 text-teal" />
+          <span className="font-editorial font-bold text-lg text-charcoal">Expenses Summary</span>
         </h2>
         <button
           onClick={fetchBreakdown}
           disabled={loading}
-          className="text-gray-400 hover:text-blue-600 p-1 hover:bg-gray-50 rounded-md transition-colors"
+          className="text-charcoal-muted hover:text-teal p-1 hover:bg-sand-light rounded-md transition-colors"
           title="Refresh breakdown"
         >
-          <RefreshCw className={`h-4.5 w-4.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {loading && !breakdown ? (
-        <p className="text-center text-gray-500 text-sm animate-pulse py-8">Calculating splits...</p>
+        <p className="text-center text-charcoal-muted text-xs animate-pulse py-8">Calculating splits...</p>
       ) : !breakdown || parseFloat(breakdown.totalSpend) === 0 ? (
-        <p className="text-center text-gray-500 text-sm py-12">No expenses logged yet. Add your transport, stay, or activity costs to see aggregates.</p>
+        <p className="text-center text-charcoal-muted text-xs py-8">No expenses logged yet. Add your costs to see category summaries.</p>
       ) : (
         <div className="space-y-6">
+          
           {/* Key metrics grid */}
-          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+          <div className="grid grid-cols-2 gap-4 bg-sand-light/60 p-4 rounded-xl border border-sand">
             <div>
-              <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Expenses</span>
-              <span className="text-xl font-black text-gray-900 flex items-center mt-1">
-                <DollarSign className="h-5.5 w-5.5 text-gray-700 -ml-1 shrink-0" />
-                <span>{parseFloat(breakdown.totalSpend).toFixed(2)}</span>
-                <span className="text-[10px] text-gray-500 uppercase font-extrabold ml-1.5">{breakdown.currency}</span>
+              <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Total Expenses</span>
+              <span className="text-xl font-black text-charcoal flex items-center mt-1">
+                <DollarSign className="h-5 w-5 text-gray-500 -ml-1 shrink-0" />
+                <span>{parseFloat(breakdown.totalSpend).toFixed(0)}</span>
+                <span className="text-[9px] text-charcoal-muted uppercase font-bold ml-1.5">{breakdown.currency}</span>
               </span>
             </div>
             <div>
-              <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Average / Day</span>
-              <span className="text-xl font-black text-blue-600 flex items-center mt-1">
-                <DollarSign className="h-5.5 w-5.5 text-blue-500 -ml-1 shrink-0" />
-                <span>{parseFloat(breakdown.averageCostPerDay).toFixed(2)}</span>
-                <span className="text-[10px] text-gray-500 uppercase font-extrabold ml-1.5">/ day</span>
+              <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Average / Day</span>
+              <span className="text-xl font-black text-coral flex items-center mt-1">
+                <DollarSign className="h-5 w-5 text-coral/80 -ml-1 shrink-0" />
+                <span>{parseFloat(breakdown.averageCostPerDay).toFixed(0)}</span>
+                <span className="text-[9px] text-charcoal-muted uppercase font-bold ml-1.5">/ day</span>
               </span>
             </div>
           </div>
 
           {/* Graphical splits list */}
           <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-50 pb-1.5">Category Splits</h3>
+            <h3 className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider border-b border-sand pb-1.5">Category Splits</h3>
             
-            <div className="space-y-4.5">
+            <div className="space-y-4">
               {Object.entries(breakdown.categories).map(([key, value]) => {
                 const percent = getPercentage(value, breakdown.totalSpend);
                 const config = categoryConfig[key];
                 
                 return (
-                  <div key={key} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-gray-700">{config.label}</span>
-                      <div className="flex items-center space-x-2 font-medium">
-                        <span className="text-gray-900 font-bold">${parseFloat(value).toFixed(2)}</span>
-                        <span className="text-gray-400">({percent}%)</span>
+                  <div key={key} className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-charcoal-muted">{config.label}</span>
+                      <div className="flex items-center space-x-2 font-bold">
+                        <span className="text-charcoal">${parseFloat(value).toFixed(0)}</span>
+                        <span className="text-gray-400 font-normal">({percent}%)</span>
                       </div>
                     </div>
                     {/* Horizontal Bar */}
-                    <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-sand-light h-2 rounded-full overflow-hidden border border-sand/40">
                       <div
                         className={`h-full ${config.color} transition-all duration-500`}
                         style={{ width: `${percent}%` }}
