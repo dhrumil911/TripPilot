@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { 
   Calendar, Trash2, Plus, AlertCircle, 
-  Globe, ArrowRight, Layout, Settings as SettingsIcon, Search, SlidersHorizontal, Pencil 
+  ArrowRight, Layout, Settings as SettingsIcon, Search, SlidersHorizontal, Pencil 
 } from 'lucide-react';
 import api from '../api/axios';
 import { DestinationCard } from '../components/DestinationCard';
@@ -67,7 +67,9 @@ export const Dashboard: React.FC = () => {
   const fetchRecommendedCities = async () => {
     try {
       const response = await api.get('/search/cities');
-      setRecommendedCities(response.data.cities.map((city: { id: string; cityName: string; country: string; popularity: string }) => enrichDestination({ id: city.id, city: city.cityName, country: city.country, popularity: city.popularity })));
+      setRecommendedCities(response.data.cities.map((city: { id: string; cityName: string; country: string; popularity: string }) => 
+        enrichDestination({ id: city.id, city: city.cityName, country: city.country, popularity: city.popularity })
+      ));
     } catch (err) {
       console.error(err);
     }
@@ -127,7 +129,6 @@ export const Dashboard: React.FC = () => {
             });
           } catch (stopErr) {
             console.error('Failed to create initial stop:', stopErr);
-            // Non-blocking error, user can still see the trip itself
           }
         }
       }
@@ -151,7 +152,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleDeleteTrip = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Avoid triggering card navigation click
+    e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this trip? This will delete all stop schedules, activities, and budget info.')) {
       return;
     }
@@ -191,7 +192,10 @@ export const Dashboard: React.FC = () => {
     return new Date(dateStr).toLocaleDateString(undefined, options);
   };
 
-  const getCoverImage = (trip: Trip) => getDestinationImage(trip.stops?.[0]?.cityName || trip.title.replace(/^Trip to /i, ''));
+  const getCoverImage = (trip: Trip) => {
+    const stop = trip.stops?.[0];
+    return getDestinationImage(stop?.cityName || trip.title.replace(/^Trip to /i, ''), stop?.country || 'India');
+  };
 
   // Filtered & Sorted Trips
   const filteredTrips = trips
@@ -205,39 +209,48 @@ export const Dashboard: React.FC = () => {
       if (sortBy === 'date-asc') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
       return a.title.localeCompare(b.title);
     });
+
   const today = new Date();
+  
+  const ongoingTrips = filteredTrips.filter((trip) => new Date(trip.startDate) <= today && new Date(trip.endDate) >= today);
+  const upcomingTrips = filteredTrips.filter((trip) => new Date(trip.startDate) > today);
+  const completedTrips = filteredTrips.filter((trip) => new Date(trip.endDate) < today);
+
   const tripGroups = [
-    { label: 'Ongoing', trips: filteredTrips.filter((trip) => new Date(trip.startDate) <= today && new Date(trip.endDate) >= today) },
-    { label: 'Upcoming', trips: filteredTrips.filter((trip) => new Date(trip.startDate) > today) },
-    { label: 'Completed', trips: filteredTrips.filter((trip) => new Date(trip.endDate) < today) },
+    { label: 'Ongoing Journeys', trips: ongoingTrips },
+    { label: 'Upcoming Adventures', trips: upcomingTrips },
+    { label: 'Completed Travels', trips: completedTrips },
   ];
 
+  // Current featured journey card
+  const currentFeaturedTrip = ongoingTrips[0] || upcomingTrips[0] || null;
+
   return (
-    <div className="min-h-screen bg-paper flex flex-col font-sans">
+    <div className="min-h-screen bg-paper flex flex-col font-sans selection:bg-coral/25 selection:text-charcoal">
       <Navbar />
 
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:grid lg:grid-cols-12 gap-8">
         
         {/* 1. Left Sidebar Navigation */}
-        <aside className="lg:col-span-3 space-y-6">
-          <div className="bg-paper border border-sand p-6 rounded-xl space-y-6 sticky top-24">
+        <aside className="order-1 lg:col-span-3 space-y-6 lg:order-none">
+          <div className="bg-surface border border-sand p-6 rounded-sm space-y-6 lg:sticky lg:top-24">
             
             <div className="space-y-1.5">
-              <span className="text-[10px] text-coral font-extrabold uppercase tracking-widest">Navigation</span>
+              <span className="text-[9px] text-coral font-extrabold uppercase tracking-widest block">Navigation</span>
               <h2 className="text-xl font-editorial font-bold text-charcoal">Workspace</h2>
             </div>
 
-            <nav className="space-y-1">
+            <nav className="grid grid-cols-2 lg:flex lg:flex-col gap-2">
               <Link 
                 to="/dashboard" 
-                className="flex items-center space-x-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-teal bg-sand-light rounded transition-colors"
+                className="flex items-center justify-center lg:justify-start space-x-2.5 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-teal bg-paper rounded-sm transition-colors border border-sand/40"
               >
                 <Layout className="h-4 w-4 shrink-0" />
                 <span>Dashboard</span>
               </Link>
               <Link 
                 to="/settings" 
-                className="flex items-center space-x-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:text-teal hover:bg-sand-light rounded transition-colors"
+                className="flex items-center justify-center lg:justify-start space-x-2.5 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:text-teal hover:bg-paper/50 rounded-sm transition-colors border border-transparent hover:border-sand/40"
               >
                 <SettingsIcon className="h-4 w-4 shrink-0" />
                 <span>Settings</span>
@@ -246,108 +259,130 @@ export const Dashboard: React.FC = () => {
 
             <div className="pt-4 border-t border-sand">
               <button
-                onClick={() => setShowForm(!showForm)}
-                className="w-full flex items-center justify-center space-x-1.5 bg-teal hover:bg-teal-hover text-paper py-2.5 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
+                onClick={() => {
+                  setShowForm(!showForm);
+                  if (!showForm) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+                className="w-full flex items-center justify-center space-x-1.5 bg-teal hover:bg-teal-hover text-paper py-3 rounded-sm text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
                 <span>{showForm ? 'Cancel Form' : 'Plan New Trip'}</span>
               </button>
             </div>
 
-            <div className="bg-paper border border-sand p-5 rounded-xl space-y-3">
-              <h3 className="font-editorial font-bold text-sm">Discover Cities</h3>
-              {recommendedCities.map((city, idx) => (
-                <div key={idx} className="bg-white border border-sand/50 rounded-lg p-3 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs">{city.city}</span>
-                    <span className="text-[10px] bg-sand px-1.5 py-0.5 rounded text-charcoal-muted font-bold">{city.popularity}</span>
+            {/* Discover sidebar list - Desktop Only */}
+            <div className="hidden lg:block pt-4 border-t border-sand space-y-3">
+              <h3 className="font-editorial font-bold text-sm text-charcoal tracking-tight">Discover Cities</h3>
+              <div className="space-y-2">
+                {recommendedCities.slice(0, 3).map((city, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => {
+                      setDestinationInput(`${city.city}, ${city.country}`);
+                      setTitle(`Trip to ${city.city}`);
+                      setShowForm(true);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="cursor-pointer bg-white border border-sand/40 hover:border-charcoal/20 rounded-sm p-3 space-y-1.5 transition-all duration-200"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-xs text-charcoal">{city.city}</span>
+                      <span className="text-[9px] bg-paper px-1.5 py-0.5 rounded-sm text-teal font-extrabold uppercase font-sans">
+                        {city.popularity || 'Curated'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[9px] text-charcoal-muted font-semibold uppercase tracking-wider">
+                      <span>{city.country}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-[10px] text-charcoal-muted">
-                    <span>{city.country}</span>
-                    <span className="font-bold text-green-700">{city.popularity}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
           </div>
         </aside>
 
         {/* 2. Main Content pane */}
-        <main className="lg:col-span-9 space-y-8">
+        <main className="order-2 lg:col-span-9 space-y-8 animate-fadeIn lg:order-none">
           
           {/* Welcome Text block */}
-          <div className="space-y-1">
-            <h1 className="text-3xl font-editorial font-bold text-charcoal">Your Travel Journal</h1>
-            <p className="text-xs text-charcoal-muted uppercase tracking-wider">Plan new itineraries and manage existing trips</p>
+          <div className="space-y-1.5">
+            <h1 className="text-3xl sm:text-4xl font-editorial font-bold text-charcoal tracking-tight leading-none">
+              Travel Command Center
+            </h1>
+            <p className="text-[10px] text-charcoal-muted uppercase tracking-widest font-extrabold block">
+              Hi, {localStorage.getItem('userName') || 'Traveler'} &middot; Manage your trips and itineraries
+            </p>
           </div>
 
           {/* Create Trip Form Section */}
           {showForm && (
-            <div className="bg-paper p-6 rounded-xl border border-sand max-w-2xl animate-fadeIn">
-              <h3 className="text-lg font-editorial font-bold text-charcoal mb-4">Start a New Journey</h3>
+            <div className="bg-surface p-6 rounded-sm border border-sand max-w-2xl animate-fadeIn space-y-6">
+              <h3 className="text-xl font-editorial font-bold text-charcoal">Start a New Journey</h3>
               
               {formError && (
-                <div className="flex items-center space-x-2 bg-coral/5 border-l-2 border-coral text-coral p-3 rounded mb-4 text-xs">
+                <div className="flex items-center space-x-2.5 bg-coral/5 border-l-2 border-coral text-coral p-4 rounded-sm text-xs font-sans">
                   <AlertCircle className="h-4.5 w-4.5 shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleCreateTrip} className="space-y-4">
+              <form onSubmit={handleCreateTrip} className="space-y-4 font-sans">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">Trip Name</label>
+                  <label className="label">Trip Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Summer EuroTrip"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-sand rounded text-xs focus:ring-1 focus:ring-teal"
+                    className="field rounded-sm text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">Destination (e.g. City, Country)</label>
+                  <label className="label">First Stop (e.g. City, Country)</label>
                   <input
                     type="text"
                     placeholder="e.g. Udaipur, India"
                     value={destinationInput}
                     onChange={(e) => setDestinationInput(e.target.value)}
-                    className="w-full px-3 py-2 border border-sand rounded text-xs focus:ring-1 focus:ring-teal"
+                    className="field rounded-sm text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">Description (Optional)</label>
+                  <label className="label">Description (Optional)</label>
                   <textarea
-                    placeholder="Tell us about the trip objectives, packing tips, or general plan..."
+                    placeholder="Describe your trip, objectives, packing priorities, or overall goals..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-sand rounded text-xs focus:ring-1 focus:ring-teal"
+                    className="field rounded-sm text-xs"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">Start Date</label>
+                    <label className="label">Start Date</label>
                     <input
                       type="date"
                       required
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-sand rounded text-xs"
+                      className="field rounded-sm text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">End Date</label>
+                    <label className="label">End Date</label>
                     <input
                       type="date"
                       required
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-sand rounded text-xs"
+                      className="field rounded-sm text-xs"
                     />
                   </div>
                 </div>
@@ -356,7 +391,7 @@ export const Dashboard: React.FC = () => {
                   <button
                     type="submit"
                     disabled={formLoading}
-                    className="bg-teal hover:bg-teal-hover text-paper font-bold text-xs uppercase tracking-wider px-4 py-2 rounded transition-colors disabled:opacity-50"
+                    className="bg-teal hover:bg-teal-hover text-paper font-bold text-[10px] uppercase tracking-widest px-6 py-3 rounded-sm transition-colors disabled:opacity-50"
                   >
                     {formLoading ? 'Creating Plan...' : 'Save Trip'}
                   </button>
@@ -365,25 +400,72 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
 
+          {/* Current Featured Journey */}
+          {currentFeaturedTrip && !showForm && (
+            <div 
+              onClick={() => navigate(`/trips/${currentFeaturedTrip.id}`)}
+              className="cursor-pointer group relative bg-surface border border-sand rounded-sm overflow-hidden flex flex-col md:flex-row transition-all hover:border-charcoal/20 duration-300"
+            >
+              <div className="md:w-1/2 aspect-[4/3] md:aspect-auto overflow-hidden bg-sand-light relative">
+                <img 
+                  src={getCoverImage(currentFeaturedTrip)} 
+                  alt="" 
+                  className="h-full w-full object-cover grayscale-[10%] group-hover:scale-102 group-hover:grayscale-0 transition-all duration-[1200ms]"
+                  onError={(event) => { event.currentTarget.src = getDestinationImage('', ''); }}
+                />
+                <div className="absolute top-4 left-4 bg-teal text-paper px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-sm">
+                  {ongoingTrips[0] ? 'Current Journey' : 'Upcoming Adventure'}
+                </div>
+              </div>
+              <div className="md:w-1/2 p-8 flex flex-col justify-between space-y-6">
+                <div className="space-y-3">
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-coral block">
+                    Featured Plan
+                  </span>
+                  <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-charcoal leading-tight tracking-tight group-hover:text-teal transition-colors">
+                    {currentFeaturedTrip.title}
+                  </h3>
+                  {currentFeaturedTrip.description && (
+                    <p className="text-xs leading-relaxed text-charcoal-muted line-clamp-3">
+                      {currentFeaturedTrip.description}
+                    </p>
+                  )}
+                </div>
+                <div className="pt-4 border-t border-sand/40 flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-[9px] font-bold uppercase tracking-wider text-charcoal-muted">
+                    <Calendar className="h-4 w-4 text-teal" />
+                    <span>
+                      {formatDate(currentFeaturedTrip.startDate)} - {formatDate(currentFeaturedTrip.endDate)}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-teal flex items-center gap-1">
+                    <span>Open Planner</span>
+                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* List Toolbar (Search / Filters) */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 bg-sand-light p-3 rounded-lg border border-sand text-xs">
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-surface p-3.5 rounded-sm border border-sand text-xs font-sans">
             <div className="relative flex-1 w-full flex items-center">
               <input
                 type="text"
                 placeholder="Search trip names, descriptions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 border border-sand rounded bg-white text-xs focus:ring-1 focus:ring-teal"
+                className="w-full pl-9 pr-3 py-2 border border-sand rounded-sm bg-white/70 text-xs focus:ring-1 focus:ring-teal"
               />
               <Search className="absolute left-3 h-4 w-4 text-gray-400" />
             </div>
 
-            <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
-              <SlidersHorizontal className="h-4 w-4 text-gray-400" />
+            <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0 font-sans">
+              <SlidersHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="border border-sand rounded py-1.5 px-3 bg-white text-xs"
+                className="border border-sand rounded-sm py-2 px-3 bg-white text-xs text-charcoal"
               >
                 <option value="date-desc">Newest First</option>
                 <option value="date-asc">Oldest First</option>
@@ -393,121 +475,218 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Trips Listing Display Grid */}
-          <div className="space-y-4">
+          <div className="space-y-8">
             {error && (
-              <div className="flex items-center space-x-2 bg-coral/5 border-l-2 border-coral text-coral p-4 rounded text-xs">
+              <div className="flex items-center space-x-2.5 bg-coral/5 border-l-2 border-coral text-coral p-4 rounded-sm text-xs font-sans animate-fadeIn">
                 <AlertCircle className="h-4.5 w-4.5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {loading ? (
-              <div className="text-center py-16 bg-paper border border-sand rounded-xl">
-                <p className="text-charcoal-muted text-xs animate-pulse font-semibold">Retrieving your journals...</p>
+              <div className="text-center py-16 bg-surface border border-sand rounded-sm">
+                <p className="text-charcoal-muted text-xs animate-pulse font-bold font-sans">Retrieving your journals...</p>
               </div>
             ) : filteredTrips.length === 0 ? (
-              <div className="text-center py-16 bg-paper border border-sand rounded-xl space-y-4">
-                <p className="text-charcoal-muted text-xs">No journeys match your filters.</p>
+              <div className="text-center py-16 bg-surface border border-sand rounded-sm space-y-4">
+                <p className="text-charcoal-muted text-xs font-sans">No journeys match your filters.</p>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="bg-sand-light hover:bg-sand text-teal border border-sand px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors"
+                  className="bg-paper hover:bg-sand text-teal border border-sand px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider transition-colors font-sans"
                 >
                   Create Trip Plan
                 </button>
               </div>
             ) : (
-              <div className="space-y-8">
-                {tripGroups.map((group) => <section key={group.label} className="space-y-3"><div className="flex items-center justify-between border-b border-sand pb-2"><h2 className="font-editorial text-xl font-bold">{group.label}</h2><span className="text-[10px] font-bold uppercase tracking-wider text-charcoal-muted">{group.trips.length} {group.trips.length === 1 ? 'trip' : 'trips'}</span></div>{group.trips.length === 0 ? <p className="border border-dashed border-sand p-6 text-xs text-charcoal-muted">No {group.label.toLocaleLowerCase()} journeys yet. Start planning your next destination.</p> : <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {group.trips.map((trip) => (
-                  <div 
-                    key={trip.id} 
-                    onClick={() => !editingTripId && navigate(`/trips/${trip.id}`)}
-                    className="cursor-pointer bg-paper border border-sand rounded-xl overflow-hidden hover:shadow-md hover:border-teal/30 transition-all flex flex-col justify-between"
-                  >
-                    {editingTripId === trip.id ? (
-                      <div className="p-4 space-y-3" onClick={e => e.stopPropagation()}>
-                        <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full px-2 py-1 text-sm border" placeholder="Title" />
-                        <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} className="w-full px-2 py-1 text-sm border" placeholder="Description" />
-                        <input type="date" value={editStartDate} onChange={e => setEditStartDate(e.target.value)} className="w-full px-2 py-1 text-sm border" />
-                        <input type="date" value={editEndDate} onChange={e => setEditEndDate(e.target.value)} className="w-full px-2 py-1 text-sm border" />
-                        <div className="flex space-x-2">
-                          <button onClick={handleEditSave} disabled={editLoading} className="bg-teal text-white px-3 py-1 rounded text-xs">Save</button>
-                          <button onClick={() => setEditingTripId(null)} className="bg-sand text-charcoal px-3 py-1 rounded text-xs">Cancel</button>
-                        </div>
+              <div className="space-y-12">
+                {tripGroups.map((group) => {
+                  if (group.trips.length === 0) return null;
+                  return (
+                    <section key={group.label} className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-sand pb-2">
+                        <h2 className="font-editorial text-2xl font-bold text-charcoal">{group.label}</h2>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-charcoal-muted">
+                          {group.trips.length} {group.trips.length === 1 ? 'trip' : 'trips'}
+                        </span>
                       </div>
-                    ) : (
-                      <>
-                        <div>
-                          {/* Cover Photo */}
-                          <div className="h-40 overflow-hidden relative">
-                            <img 
-                              src={getCoverImage(trip)} 
-                              alt={trip.title} 
-                              className="w-full h-full object-cover grayscale-[10%]" 
-                              onError={(event) => { event.currentTarget.src = getDestinationImage(''); }}
-                            />
-                            <div className="absolute top-3 right-3 flex space-x-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingTripId(trip.id);
-                                  setEditTitle(trip.title);
-                                  setEditDescription(trip.description || '');
-                                  setEditStartDate(trip.startDate.split('T')[0]);
-                                  setEditEndDate(trip.endDate.split('T')[0]);
-                                }}
-                                className="text-paper hover:text-teal bg-black bg-opacity-30 hover:bg-opacity-50 p-1.5 rounded transition-all"
-                                title="Edit Journey"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={(e) => handleDeleteTrip(trip.id, e)}
-                                className="text-paper hover:text-coral bg-black bg-opacity-30 hover:bg-opacity-50 p-1.5 rounded transition-all"
-                                title="Delete Journey"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {group.trips.map((trip) => (
+                          <div 
+                            key={trip.id} 
+                            onClick={() => !editingTripId && navigate(`/trips/${trip.id}`)}
+                            className="group cursor-pointer bg-surface border border-sand rounded-sm overflow-hidden hover:border-charcoal/20 transition-all flex flex-col justify-between duration-300"
+                          >
+                            {editingTripId === trip.id ? (
+                              <div className="p-5 space-y-4 font-sans" onClick={e => e.stopPropagation()}>
+                                <h4 className="text-xs font-bold uppercase text-teal">Edit Details</h4>
+                                <div className="space-y-2">
+                                  <input 
+                                    value={editTitle} 
+                                    onChange={e => setEditTitle(e.target.value)} 
+                                    className="field text-xs rounded-sm" 
+                                    placeholder="Title" 
+                                  />
+                                  <textarea 
+                                    value={editDescription} 
+                                    onChange={e => setEditDescription(e.target.value)} 
+                                    className="field text-xs rounded-sm" 
+                                    rows={2}
+                                    placeholder="Description" 
+                                  />
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <input 
+                                      type="date" 
+                                      value={editStartDate} 
+                                      onChange={e => setEditStartDate(e.target.value)} 
+                                      className="field text-xs rounded-sm" 
+                                    />
+                                    <input 
+                                      type="date" 
+                                      value={editEndDate} 
+                                      onChange={e => setEditEndDate(e.target.value)} 
+                                      className="field text-xs rounded-sm" 
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex space-x-2 justify-end pt-2">
+                                  <button 
+                                    onClick={handleEditSave} 
+                                    disabled={editLoading} 
+                                    className="bg-teal text-white px-4 py-2 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                                  >
+                                    {editLoading ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button 
+                                    onClick={() => setEditingTripId(null)} 
+                                    className="border border-sand text-charcoal px-4 py-2 rounded-sm text-[10px] font-bold uppercase tracking-wider hover:bg-paper"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div>
+                                  {/* Cover Photo */}
+                                  <div className="h-40 overflow-hidden relative border-b border-sand bg-sand-light">
+                                    <img 
+                                      src={getCoverImage(trip)} 
+                                      alt={trip.title} 
+                                      className="w-full h-full object-cover grayscale-[10%] group-hover:scale-102 group-hover:grayscale-0 transition-all duration-[1000ms]" 
+                                      onError={(event) => { event.currentTarget.src = getDestinationImage('', ''); }}
+                                    />
+                                    <div className="absolute top-3 right-3 flex space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingTripId(trip.id);
+                                          setEditTitle(trip.title);
+                                          setEditDescription(trip.description || '');
+                                          setEditStartDate(trip.startDate.split('T')[0]);
+                                          setEditEndDate(trip.endDate.split('T')[0]);
+                                        }}
+                                        className="text-charcoal border border-sand bg-surface hover:bg-paper p-1.5 rounded-sm transition-all"
+                                        title="Edit Journey"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => handleDeleteTrip(trip.id, e)}
+                                        className="text-coral border border-sand bg-surface hover:bg-coral/5 p-1.5 rounded-sm transition-all"
+                                        title="Delete Journey"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
 
-                          <div className="p-6 space-y-2">
-                            <h3 className="font-editorial font-bold text-xl text-charcoal line-clamp-1">{trip.title}</h3>
-                            {trip.description && (
-                              <p className="text-charcoal-muted text-xs line-clamp-2 leading-relaxed">{trip.description}</p>
+                                  <div className="p-5 space-y-2">
+                                    <h3 className="font-editorial font-bold text-xl text-charcoal group-hover:text-teal transition-colors leading-tight tracking-tight">
+                                      {trip.title}
+                                    </h3>
+                                    {trip.description && (
+                                      <p className="text-charcoal-muted text-xs leading-relaxed font-sans line-clamp-2 mt-1">
+                                        {trip.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="px-5 py-3.5 bg-paper/40 border-t border-sand flex items-center justify-between text-xs">
+                                  <div className="flex items-center space-x-1.5 text-[9px] text-charcoal-muted font-bold uppercase tracking-wider">
+                                    <Calendar className="h-3.5 w-3.5 text-teal shrink-0" />
+                                    <span>
+                                      {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+                                    </span>
+                                  </div>
+                                  <span className="text-teal font-bold uppercase tracking-widest text-[9px] flex items-center gap-0.5">
+                                    <span>Open</span>
+                                    <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                                  </span>
+                                </div>
+                              </>
                             )}
                           </div>
-                        </div>
-
-                        <div className="px-6 py-4 bg-sand-light border-t border-sand flex items-center justify-between">
-                          <div className="flex items-center space-x-1 text-[10px] text-charcoal-muted font-bold">
-                            <Calendar className="h-3.5 w-3.5 text-teal" />
-                            <span>
-                              {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
-                            </span>
-                          </div>
-                          <span className="text-teal hover:text-teal-hover text-xs font-bold uppercase tracking-wider flex items-center space-x-0.5">
-                            <span>Open Details</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>}</section>)}
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* Recommended Destinations Highlights */}
-          <div className="space-y-4 pt-6 border-t border-sand">
-            <h2 className="text-lg font-editorial font-bold text-charcoal flex items-center space-x-2">
-              <Globe className="h-5 w-5 text-teal" />
-              <span>Recommended Destinations</span>
-            </h2>
+          <div className="space-y-4 pt-10 border-t border-sand">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4">
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-coral block font-sans">
+                  Suggestions
+                </span>
+                <h2 className="text-2xl font-editorial font-bold text-charcoal">Explore Inspiration</h2>
+              </div>
+              <p className="text-xs text-charcoal-muted font-sans">Curated recommendations matching catalog favorites.</p>
+            </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">{recommendedCities.map((destination) => <DestinationCard key={destination.id} destination={destination} />)}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recommendedCities.slice(0, 4).map((destination) => (
+                <DestinationCard key={destination.id} destination={destination} />
+              ))}
+            </div>
+          </div>
+          {/* Discover Cities - Mobile Only */}
+          <div className="lg:hidden bg-surface border border-sand p-6 rounded-sm space-y-4 pt-10 border-t border-sand">
+            <div className="space-y-1.5">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-coral block font-sans">
+                Explore Destinations
+              </span>
+              <h3 className="font-editorial font-bold text-xl text-charcoal tracking-tight">Discover Cities</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {recommendedCities.slice(0, 4).map((city, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => {
+                    setDestinationInput(`${city.city}, ${city.country}`);
+                    setTitle(`Trip to ${city.city}`);
+                    setShowForm(true);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="cursor-pointer bg-white border border-sand/40 hover:border-charcoal/20 rounded-sm p-4 space-y-1.5 transition-all duration-200"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs text-charcoal">{city.city}</span>
+                    <span className="text-[9px] bg-paper px-1.5 py-0.5 rounded-sm text-teal font-extrabold uppercase font-sans">
+                      {city.popularity || 'Curated'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[9px] text-charcoal-muted font-semibold uppercase tracking-wider">
+                    <span>{city.country}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
         </main>

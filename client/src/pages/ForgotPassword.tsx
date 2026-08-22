@@ -43,101 +43,141 @@ export const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-paper py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-paper border border-sand p-8 rounded-xl shadow-sm">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center text-coral">
-            <Compass className="h-10 w-10" />
-          </div>
-          <h2 className="mt-2 text-3xl font-editorial font-bold text-charcoal">Reset Password</h2>
-          <p className="text-xs text-charcoal-muted uppercase tracking-wider">
-            Enter your details to create a new password
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-paper">
+      
+      {/* Brand Pane (Left) */}
+      <div className="hidden md:flex md:col-span-5 lg:col-span-6 bg-teal text-paper flex-col justify-between p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-teal/90 to-teal/30 z-10" />
+        <img 
+          src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80" 
+          alt="Travel view" 
+          className="absolute inset-0 h-full w-full object-cover opacity-25 grayscale pointer-events-none"
+        />
+        
+        <div className="relative z-20 flex items-center space-x-2 text-paper font-editorial font-bold text-2xl tracking-tight">
+          <Compass className="h-6 w-6 text-coral" />
+          <span className="font-editorial italic font-normal text-paper">Trip</span>
+          <span className="font-editorial font-bold -ml-1">Pilot</span>
+        </div>
+
+        <div className="relative z-20 space-y-4 max-w-sm">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-coral block">
+            03 / Recover
+          </span>
+          <h1 className="text-4xl lg:text-5xl font-editorial font-bold leading-tight tracking-tight">
+            Regain your path.<br />
+            <span className="italic font-normal text-coral/95">We'll help you back.</span>
+          </h1>
+          <p className="text-paper/70 font-sans text-xs leading-relaxed">
+            Verify your name and email to establish a new password credential securely.
           </p>
         </div>
 
-        {error && (
-          <div className="flex items-center space-x-2 bg-coral/5 border-l-2 border-coral text-coral p-3 rounded text-xs">
-            <AlertCircle className="h-4.5 w-4.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-        
-        {success && (
-          <div className="flex items-center space-x-2 bg-teal/5 border-l-2 border-teal text-teal p-3 rounded text-xs">
-            <CheckCircle className="h-4.5 w-4.5 shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
+        <div className="relative z-20 text-[9px] uppercase tracking-widest text-paper/40 font-bold font-sans">
+          &copy; {new Date().getFullYear()} TripPilot. Travel editorial command center.
+        </div>
+      </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
-                Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-sand rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal"
-                placeholder="John Doe"
-              />
+      {/* Form Pane (Right) */}
+      <div className="col-span-1 md:col-span-7 lg:col-span-6 flex items-center justify-center p-6 sm:p-12 lg:p-24 bg-surface">
+        <div className="w-full max-w-md space-y-8 animate-fadeIn">
+          
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 text-teal font-editorial font-bold text-xl tracking-tight md:hidden mb-4">
+              <Compass className="h-5.5 w-5.5 text-coral" />
+              <span>TripPilot</span>
             </div>
-            <div>
-              <label htmlFor="email-address" className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
-                Email Address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-sand rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal"
-                placeholder="you@example.com"
-              />
-            </div>
-            <div>
-              <label htmlFor="new-password" className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
-                New Password
-              </label>
-              <input
-                id="new-password"
-                name="newPassword"
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-sand rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal"
-                placeholder="••••••••"
-              />
-            </div>
+            <h2 className="text-3xl font-editorial font-bold text-charcoal leading-tight tracking-tight">Reset Password</h2>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-charcoal-muted font-sans">
+              Enter your details to create a new password
+            </p>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 text-xs font-bold uppercase tracking-wider rounded text-paper bg-teal hover:bg-teal-hover transition-colors disabled:opacity-50 shadow-sm"
-            >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </div>
-        </form>
+          {error && (
+            <div className="flex items-center space-x-2.5 bg-coral/5 border-l-2 border-coral text-coral p-4 rounded-sm text-xs font-sans animate-fadeIn">
+              <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div className="text-center mt-4">
-          <p className="text-xs text-charcoal-muted">
-            Remember your password?{' '}
-            <Link to="/login" className="font-bold text-coral hover:text-coral-hover transition-colors">
-              Sign in
-            </Link>
-          </p>
+          {success && (
+            <div className="flex items-center space-x-2.5 bg-green-50 border-l-2 border-green-500 text-green-700 p-4 rounded-sm text-xs font-sans animate-fadeIn">
+              <CheckCircle className="h-4.5 w-4.5 shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
+
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="label font-sans block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="field rounded-sm text-xs font-sans"
+                  placeholder="John Doe"
+                />
+              </div>
+              <div>
+                <label htmlFor="email-address" className="label font-sans block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                  Email Address
+                </label>
+                <input
+                  id="email-address"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="field rounded-sm text-xs font-sans"
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div>
+                <label htmlFor="new-password" className="label font-sans block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                  New Password
+                </label>
+                <input
+                  id="new-password"
+                  name="newPassword"
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="field rounded-sm text-xs font-sans"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-3 px-4 text-[10px] font-bold uppercase tracking-widest rounded-sm text-paper bg-teal hover:bg-teal-hover transition-colors disabled:opacity-50 shadow-sm font-sans"
+              >
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </div>
+          </form>
+
+          <div className="text-center mt-6 border-t border-sand/40 pt-6">
+            <p className="text-xs text-charcoal-muted font-sans font-medium">
+              Remember your password?{' '}
+              <Link to="/login" className="font-bold text-coral hover:underline transition-all">
+                Sign in
+              </Link>
+            </p>
+          </div>
+          
         </div>
       </div>
     </div>

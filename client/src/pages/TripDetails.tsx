@@ -6,7 +6,7 @@ import { BudgetBreakdown } from '../components/BudgetBreakdown';
 import { CalendarView } from '../components/CalendarView';
 import { formatCurrency } from '../utils/currency';
 import { 
-  Calendar, MapPin, Plus, Trash2, ArrowUp, ArrowDown, Share2, 
+  Calendar, Plus, Trash2, ArrowUp, ArrowDown, Share2, 
   Sparkles, DollarSign, Check, Clock, Eye, AlertCircle 
 } from 'lucide-react';
 import api from '../api/axios';
@@ -40,7 +40,20 @@ interface ItineraryItem {
   startTime: string | null;
   endTime: string | null;
   sortOrder: number;
+  activity?: {
+    category: string;
+  } | null;
 }
+
+const getCategoryColor = (category?: string | null) => {
+  switch (category?.toLowerCase()) {
+    case 'transport': return 'border-teal bg-teal text-teal-hover';
+    case 'stay': return 'border-coral bg-coral text-coral-hover';
+    case 'activity': return 'border-amber-700 bg-amber-700 text-amber-900'; // warm bronze
+    case 'meal': return 'border-green-700 bg-green-700 text-green-900'; // sage green
+    default: return 'border-charcoal-muted bg-charcoal-muted text-charcoal'; // warm gray
+  }
+};
 
 interface Expense {
   id: string;
@@ -95,6 +108,7 @@ export const TripDetails: React.FC = () => {
 
   // Calendar toggle
   const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
+  const [expandedStopActivities, setExpandedStopActivities] = useState<Record<string, boolean>>({});
 
   // Forms Visibility & Data
   const [showStopForm, setShowStopForm] = useState(false);
@@ -332,33 +346,33 @@ export const TripDetails: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col font-sans text-charcoal">
+    <div className="min-h-screen bg-paper flex flex-col font-sans text-charcoal selection:bg-coral/25 selection:text-charcoal animate-fadeIn">
       <Navbar />
 
       {/* Editorial Planner Header Banner */}
-      <div className="border-b border-sand py-8 bg-paper">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2">
-            <Link to="/dashboard" className="text-teal hover:text-teal-hover text-xs font-bold uppercase tracking-wider">&larr; Workspace</Link>
-            <h1 className="text-3xl sm:text-4xl font-editorial font-bold leading-tight">{trip.title}</h1>
-            {trip.description && <p className="text-charcoal-muted text-xs max-w-2xl">{trip.description}</p>}
+      <div className="border-b border-sand py-5 bg-surface-muted/30">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-1">
+            <Link to="/dashboard" className="text-teal hover:text-teal/80 text-[10px] font-bold uppercase tracking-wider font-sans">&larr; Workspace</Link>
+            <h1 className="text-3xl font-editorial font-bold leading-tight text-charcoal">{trip.title}</h1>
+            {trip.description && <p className="text-charcoal-muted text-xs max-w-2xl font-sans font-normal">{trip.description}</p>}
             
-            <div className="flex items-center space-x-2 text-[11px] text-charcoal-muted font-bold pt-1">
-              <Calendar className="h-4 w-4 text-coral shrink-0" />
+            <div className="flex items-center space-x-1.5 text-[10px] text-charcoal-muted font-bold pt-0.5 font-sans">
+              <Calendar className="h-3.5 w-3.5 text-coral shrink-0" />
               <span>{formatDate(trip.startDate)} &mdash; {formatDate(trip.endDate)}</span>
             </div>
           </div>
 
           {/* Share Controls */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <Link to={`/trips/${trip.id}/calendar`} className="flex items-center gap-1.5 border border-sand bg-white px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:border-teal hover:text-teal"><Calendar className="h-3.5 w-3.5" />Calendar</Link>
-            <Link to={`/trips/${trip.id}/budget`} className="flex items-center gap-1.5 border border-sand bg-white px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:border-teal hover:text-teal"><DollarSign className="h-3.5 w-3.5" />Budget</Link>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0 font-sans">
+            <Link to={`/trips/${trip.id}/calendar`} className="flex items-center gap-1.5 border border-sand bg-surface px-3 py-2 rounded-sm text-[10px] font-bold uppercase tracking-wider text-charcoal-muted hover:border-teal hover:text-teal transition-all"><Calendar className="h-3.5 w-3.5" />Calendar</Link>
+            <Link to={`/trips/${trip.id}/budget`} className="flex items-center gap-1.5 border border-sand bg-surface px-3 py-2 rounded-sm text-[10px] font-bold uppercase tracking-wider text-charcoal-muted hover:border-teal hover:text-teal transition-all"><DollarSign className="h-3.5 w-3.5" />Budget</Link>
             <button
               onClick={handleToggleShare}
-              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded text-xs font-bold uppercase tracking-wider border transition-colors ${
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-sm text-[10px] font-bold uppercase tracking-wider border transition-colors ${
                 trip.shareKey 
                   ? 'bg-teal text-paper border-teal' 
-                  : 'bg-white border-sand text-charcoal-muted hover:border-charcoal'
+                  : 'bg-surface border-sand text-charcoal-muted hover:border-charcoal'
               }`}
             >
               <Share2 className="h-3.5 w-3.5" />
@@ -366,32 +380,32 @@ export const TripDetails: React.FC = () => {
             </button>
 
             {trip.shareKey && (
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2 bg-sand-light border border-sand p-1.5 rounded text-xs">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-1 bg-sand-light border border-sand p-1 rounded-sm text-xs">
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-teal hover:bg-teal-hover text-paper rounded text-[9px] font-bold uppercase tracking-widest transition-colors"
+                    className="flex items-center space-x-1 px-2.5 py-1 bg-teal hover:bg-teal/95 text-paper rounded-sm text-[9px] font-bold uppercase tracking-widest transition-colors"
                   >
-                    {copiedLink ? <Check className="h-3 w-3" /> : null}
+                    {copiedLink ? <Check className="h-2.5 w-2.5" /> : null}
                     <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
                   </button>
                   <a
                     href={`/shared/${trip.shareKey}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-charcoal-muted hover:text-teal p-1.5 hover:bg-white rounded"
+                    className="text-charcoal-muted hover:text-teal p-1 hover:bg-surface rounded-sm transition-colors"
                     title="View Public Shared Itinerary"
                   >
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-3.5 w-3.5" />
                   </a>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   <button onClick={() => window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out my trip: ' + trip.title) + '&url=' + encodeURIComponent(window.location.origin + '/shared/' + trip.shareKey), '_blank')}
-                    className="px-2 py-1 text-[10px] font-bold border border-sand rounded hover:bg-sand-light">Twitter</button>
+                    className="px-2 py-1 text-[9px] font-bold border border-sand rounded-sm hover:bg-sand-light uppercase tracking-wider font-sans">Twitter</button>
                   <button onClick={() => window.open('https://wa.me/?text=' + encodeURIComponent('Check out my trip plan: ' + window.location.origin + '/shared/' + trip.shareKey), '_blank')}
-                    className="px-2 py-1 text-[10px] font-bold border border-sand rounded hover:bg-sand-light">WhatsApp</button>
+                    className="px-2 py-1 text-[9px] font-bold border border-sand rounded-sm hover:bg-sand-light uppercase tracking-wider font-sans">WhatsApp</button>
                   <button onClick={() => window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.origin + '/shared/' + trip.shareKey), '_blank')}
-                    className="px-2 py-1 text-[10px] font-bold border border-sand rounded hover:bg-sand-light">Facebook</button>
+                    className="px-2 py-1 text-[9px] font-bold border border-sand rounded-sm hover:bg-sand-light uppercase tracking-wider font-sans">Facebook</button>
                 </div>
               </div>
             )}
@@ -400,34 +414,35 @@ export const TripDetails: React.FC = () => {
       </div>
 
       {/* Columns Grid */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7 lg:gap-8">
         
-        {/* Left Column: Stops and Cities (Span 4) */}
-        <section className="lg:col-span-4 space-y-6">
-          <div className="bg-paper border border-sand p-6 rounded-xl space-y-4">
+        {/* Left Column: Stops and Cities */}
+        <section className="space-y-5 md:col-span-1">
+          <div className="bg-surface border border-sand p-4 md:p-5 rounded-2xl space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
             
-            <div className="flex items-center justify-between border-b border-sand pb-3">
-              <h2 className="text-base font-bold text-charcoal flex items-center space-x-2">
-                <MapPin className="h-4.5 w-4.5 text-teal" />
-                <span className="font-editorial font-bold text-lg text-charcoal">Cities & Stops</span>
+            <div className="flex items-center justify-between border-b border-sand pb-2">
+              <h2 className="font-editorial text-lg font-bold text-charcoal flex items-center gap-1.5">
+                <span>📍</span>
+                <span>Cities & Stops</span>
               </h2>
               <button
                 onClick={() => setShowStopForm(!showStopForm)}
-                className="text-teal hover:text-teal-hover hover:bg-sand-light p-1 rounded-md transition-colors"
+                className="text-teal hover:text-coral transition-colors p-1"
+                aria-label="Add Stop"
               >
-                <Plus className="h-4.5 w-4.5" />
+                <Plus className="h-4 w-4" />
               </button>
             </div>
 
             {/* Add Stop Form */}
             {showStopForm && (
-              <form onSubmit={handleAddStop} className="bg-sand-light/50 p-4 rounded-lg border border-sand space-y-3 animate-fadeIn">
+              <form onSubmit={handleAddStop} className="bg-sand-light/50 p-4 rounded-xl border border-sand space-y-3 animate-fadeIn font-sans">
                 <div className="relative">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">City Name</label>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">City Name</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Paris"
+                    placeholder="e.g. Jaipur"
                     value={cityName}
                     onChange={(e) => {
                       setCityName(e.target.value);
@@ -435,10 +450,10 @@ export const TripDetails: React.FC = () => {
                     }}
                     onFocus={() => { if (citySearchResults.length > 0) setShowCitySuggestions(true); }}
                     onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
-                    className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                    className="w-full px-2.5 py-1.5 border border-sand rounded-sm text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                   />
                   {showCitySuggestions && citySearchResults.length > 0 && (
-                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-sand rounded-lg shadow-md max-h-40 overflow-y-auto">
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-sand rounded-sm shadow-md max-h-40 overflow-y-auto">
                       {citySearchResults.map(city => (
                         <button key={city.id} type="button" onClick={() => { setCityName(city.cityName); setCountry(city.country); setShowCitySuggestions(false); }}
                           className="w-full text-left px-3 py-2 text-xs hover:bg-sand-light flex justify-between">
@@ -450,40 +465,40 @@ export const TripDetails: React.FC = () => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Country</label>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Country</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. France"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                    className="w-full px-2.5 py-1.5 border border-sand rounded-sm text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Arrival Date</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Arrival Date</label>
                     <input
                       type="date"
                       required
                       value={stopStartDate}
                       onChange={(e) => setStopStartDate(e.target.value)}
-                      className="w-full px-2 py-1 border border-sand rounded text-[11px] bg-white"
+                      className="w-full px-2 py-1 border border-sand rounded-sm text-[11px] bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Departure Date</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Departure Date</label>
                     <input
                       type="date"
                       required
                       value={stopEndDate}
                       onChange={(e) => setStopEndDate(e.target.value)}
-                      className="w-full px-2 py-1 border border-sand rounded text-[11px] bg-white"
+                      className="w-full px-2 py-1 border border-sand rounded-sm text-[11px] bg-white"
                     />
                   </div>
                 </div>
                 <div className="flex justify-end pt-1">
-                  <button type="submit" className="bg-teal hover:bg-teal-hover text-paper font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded transition-colors shadow-sm">
+                  <button type="submit" className="bg-teal hover:bg-teal/95 text-paper font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-sm transition-colors shadow-sm">
                     Add Stop
                   </button>
                 </div>
@@ -495,111 +510,168 @@ export const TripDetails: React.FC = () => {
               <p className="text-charcoal-muted text-xs py-4 text-center">No stop destinations added yet.</p>
             ) : (
               <div className="space-y-4">
-                {trip.stops.map((stop, i) => (
-                  <div key={stop.id} className="border border-sand rounded-xl p-4 space-y-3 bg-white hover:border-teal/30 hover:shadow-sm transition-all">
-                    
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-start gap-3 space-y-1">
-                        <img src={getDestinationImage(stop.cityName)} alt="" className="h-12 w-16 shrink-0 rounded object-cover" onError={(event) => { event.currentTarget.src = getDestinationImage(''); }} />
-                        <div className="min-w-0">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="bg-sand-light text-teal font-editorial font-bold text-xs rounded-full h-5 w-5 flex items-center justify-center border border-sand">
-                            {stop.stopOrder}
-                          </span>
-                          <h3 className="font-bold text-charcoal text-sm leading-none">{stop.cityName}, {stop.country}</h3>
-                        </div>
-                        <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider">
-                          {formatDate(stop.startDate)} &mdash; {formatDate(stop.endDate)}
-                        </p>
-                        </div>
-                      </div>
-
-                      {/* Direction controls */}
-                      <div className="flex items-center space-x-1 shrink-0">
-                        <button
-                          onClick={() => handleMoveStop(i, 'up')}
-                          disabled={i === 0}
-                          className="text-gray-400 hover:text-teal disabled:opacity-30 p-0.5"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleMoveStop(i, 'down')}
-                          disabled={i === trip.stops.length - 1}
-                          className="text-gray-400 hover:text-teal disabled:opacity-30 p-0.5"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteStop(stop.id)}
-                          className="text-gray-400 hover:text-coral p-0.5 ml-1 animate-pulse"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Attached Activities inside stop */}
-                    <div className="border-t border-sand pt-3 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-charcoal-muted font-bold">
-                        <span className="text-[9px] uppercase tracking-wider">Sights & Excursions</span>
-                        <button
-                          onClick={() => setActiveStopIdForSelector(stop.id)}
-                          className="text-coral hover:text-coral/80 font-bold flex items-center space-x-0.5 text-[10px] uppercase tracking-wider"
-                        >
-                          <Sparkles className="h-3 w-3 text-orange-500 animate-pulse shrink-0" />
-                          <span>Attach catalog</span>
-                        </button>
-                      </div>
-
-                      {stop.activities.length === 0 ? (
-                        <p className="text-[10px] text-charcoal-muted italic">No activities added.</p>
-                      ) : (
-                        <div className="space-y-1.5">
-                          {stop.activities.map((act) => (
-                            <div key={act.id} className="flex items-center justify-between bg-sand-light/50 px-2 py-1 rounded text-xs border border-sand/40 gap-1.5">
-                              <span className="font-semibold text-charcoal truncate">{act.name}</span>
-                              <span className="text-[9px] text-green-700 font-bold shrink-0">{formatCurrency(act.estimatedCost)}</span>
+                {trip.stops.map((stop, i) => {
+                  const isExpanded = expandedStopActivities[stop.id] || false;
+                  const visibleActivities = isExpanded ? stop.activities : stop.activities.slice(0, 3);
+                  
+                  return (
+                    <div key={stop.id} className="border border-sand rounded-xl p-3.5 space-y-3 bg-white hover:border-teal/30 hover:shadow-sm transition-all duration-300">
+                      
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <img 
+                            src={getDestinationImage(stop.cityName, stop.country)} 
+                            alt="" 
+                            className="h-10 w-14 shrink-0 rounded-sm object-cover border border-sand/40 grayscale-[10%]" 
+                            onError={(event) => { event.currentTarget.src = getDestinationImage('', ''); }} 
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-baseline flex-wrap">
+                              <span className="font-editorial italic text-sm text-teal mr-1 leading-none">{stop.stopOrder}.</span>
+                              <h3 className="font-editorial text-sm font-bold text-charcoal leading-tight inline">{stop.cityName}, {stop.country}</h3>
                             </div>
-                          ))}
+                            <p className="text-[9px] text-charcoal-muted font-bold uppercase tracking-wider mt-0.5 leading-none">
+                              {formatDate(stop.startDate)} &mdash; {formatDate(stop.endDate)}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                    </div>
 
-                  </div>
-                ))}
+                        {/* Direction controls */}
+                        <div className="flex items-center space-x-0.5 shrink-0 bg-paper border border-sand/60 px-1 py-0.5 rounded-sm">
+                          <button
+                            onClick={() => handleMoveStop(i, 'up')}
+                            disabled={i === 0}
+                            className="text-gray-400 hover:text-teal disabled:opacity-20 p-0.5"
+                            aria-label="Move Stop Up"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleMoveStop(i, 'down')}
+                            disabled={i === trip.stops.length - 1}
+                            className="text-gray-400 hover:text-teal disabled:opacity-20 p-0.5"
+                            aria-label="Move Stop Down"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Delete this stop? This removes associated itinerary activities.')) {
+                                handleDeleteStop(stop.id);
+                              }
+                            }}
+                            className="text-gray-400 hover:text-coral p-0.5 ml-0.5"
+                            aria-label="Delete Stop"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Attached Activities inside stop */}
+                      <div className="border-t border-sand/50 pt-2.5 space-y-2">
+                        <div className="flex items-center justify-between text-xs text-charcoal-muted font-bold">
+                          <span className="text-[9px] uppercase tracking-wider">Sights & Excursions</span>
+                          <button
+                            onClick={() => setActiveStopIdForSelector(stop.id)}
+                            className="text-coral hover:text-coral/80 font-bold flex items-center space-x-0.5 text-[9px] uppercase tracking-wider"
+                          >
+                            <Sparkles className="h-3 w-3 text-orange-500 shrink-0 animate-pulse" />
+                            <span>+ Attach catalog</span>
+                          </button>
+                        </div>
+
+                        {stop.activities.length === 0 ? (
+                          <p className="text-[10px] text-charcoal-muted italic">No activities added.</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {visibleActivities.map((act) => (
+                              <div key={act.id} className="flex items-center justify-between bg-paper/60 px-2 py-1 rounded-sm text-xs border border-sand/40 gap-2 hover:bg-paper transition-colors duration-150 group">
+                                <span className="font-medium text-charcoal truncate">{act.name}</span>
+                                <span className="text-[9px] text-teal font-extrabold shrink-0 font-sans">{formatCurrency(act.estimatedCost)}</span>
+                              </div>
+                            ))}
+                            {stop.activities.length > 3 && (
+                              <button 
+                                type="button" 
+                                onClick={() => setExpandedStopActivities({
+                                  ...expandedStopActivities,
+                                  [stop.id]: !isExpanded
+                                })}
+                                className="text-[9px] font-bold uppercase tracking-widest text-teal hover:text-coral mt-1.5 block transition-colors"
+                              >
+                                {isExpanded ? 'Show less' : `Show ${stop.activities.length - 3} more`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  );
+                })}
               </div>
             )}
 
           </div>
         </section>
 
-        {/* Middle Column: Daily Timeline Logs (Span 5) */}
-        <section className="lg:col-span-5 space-y-6">
-          <div className="bg-paper border border-sand p-6 rounded-xl space-y-4">
+        {/* Middle Column: Daily Timeline Logs */}
+        <section className="space-y-5 md:col-span-1">
+          <div className="bg-surface border border-sand p-4 md:p-5 rounded-2xl space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
             
-            <div className="flex items-center justify-between border-b border-sand pb-3">
-              <h2 className="text-base font-bold text-charcoal flex items-center space-x-2">
-                <Calendar className="h-4.5 w-4.5 text-teal" />
-                <span className="font-editorial font-bold text-lg text-charcoal">Timeline Planner</span>
+            <div className="flex items-center justify-between border-b border-sand pb-2">
+              <h2 className="font-editorial text-lg font-bold text-charcoal flex items-center gap-1.5">
+                <span>📅</span>
+                <span>Timeline Planner</span>
               </h2>
               {trip.stops.length > 0 && (
                 <button
                   onClick={() => setShowItemForm(!showItemForm)}
-                  className="flex items-center gap-1.5 text-teal hover:text-teal-hover hover:bg-sand-light px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors"
+                  className="text-teal hover:text-coral transition-colors p-1"
+                  aria-label="Add Section"
                 >
-                  <Plus className="h-4.5 w-4.5" />
-                  <span>Add another Section</span>
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Segmented control and smaller action */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex border border-sand bg-paper p-0.5 rounded-sm text-[9.5px] font-bold uppercase tracking-wider font-sans">
+                <button 
+                  type="button" 
+                  onClick={() => setViewMode('timeline')} 
+                  className={`px-3 py-1 rounded-sm transition-all ${viewMode === 'timeline' ? 'bg-surface text-teal shadow-sm border border-sand/40' : 'text-charcoal-muted hover:text-charcoal'}`}
+                >
+                  Timeline
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setViewMode('calendar')} 
+                  className={`px-3 py-1 rounded-sm transition-all ${viewMode === 'calendar' ? 'bg-surface text-teal shadow-sm border border-sand/40' : 'text-charcoal-muted hover:text-charcoal'}`}
+                >
+                  Calendar
+                </button>
+              </div>
+
+              {trip.stops.length > 0 && (
+                <button 
+                  type="button" 
+                  onClick={() => setShowItemForm(!showItemForm)} 
+                  className="text-[9px] font-bold uppercase tracking-widest text-teal hover:text-coral transition-colors font-sans"
+                >
+                  Add section log
                 </button>
               )}
             </div>
 
             {/* Add Itinerary Item Form */}
             {showItemForm && (
-              <form onSubmit={handleAddItem} className="bg-sand-light/50 p-4 rounded-lg border border-sand space-y-3 animate-fadeIn">
+              <form onSubmit={handleAddItem} className="bg-sand-light/50 p-4 rounded-xl border border-sand space-y-3 animate-fadeIn font-sans">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Select Stop City</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Select Stop City</label>
                     <select
                       required
                       value={itemStopId}
@@ -607,62 +679,62 @@ export const TripDetails: React.FC = () => {
                         setItemStopId(e.target.value);
                         setItemActivityId('');
                       }}
-                      className="w-full px-2 py-1.5 border border-sand rounded text-xs bg-white"
+                      className="w-full px-2 py-1.5 border border-sand rounded-sm text-xs bg-white"
                     >
                       <option value="">-- Choose Stop --</option>
                       {trip.stops.map(s => <option key={s.id} value={s.id}>{s.cityName}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Itinerary Date</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Itinerary Date</label>
                     <input
                       type="date"
                       required
                       value={itemDate}
                       onChange={(e) => setItemDate(e.target.value)}
-                      className="w-full px-2 py-1 border border-sand rounded text-xs bg-white"
+                      className="w-full px-2 py-1 border border-sand rounded-sm text-xs bg-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Title / Description</label>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Title / Description</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Louvre guided tour"
                     value={itemTitle}
                     onChange={(e) => setItemTitle(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white mb-2"
+                    className="w-full px-2.5 py-1.5 border border-sand rounded-sm text-xs bg-white mb-2"
                   />
                   <textarea
                     placeholder="Log activity details, notes..."
                     value={itemDesc}
                     onChange={(e) => setItemDesc(e.target.value)}
                     rows={2}
-                    className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white"
+                    className="w-full px-2.5 py-1.5 border border-sand rounded-sm text-xs bg-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Start Time</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Start Time</label>
                     <input
                       type="time"
                       placeholder="e.g. 09:30"
                       value={itemStart}
                       onChange={(e) => setItemStart(e.target.value)}
-                      className="w-full px-2 py-1 border border-sand rounded text-xs bg-white"
+                      className="w-full px-2 py-1 border border-sand rounded-sm text-xs bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">End Time</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">End Time</label>
                     <input
                       type="time"
                       placeholder="e.g. 12:30"
                       value={itemEnd}
                       onChange={(e) => setItemEnd(e.target.value)}
-                      className="w-full px-2 py-1 border border-sand rounded text-xs bg-white"
+                      className="w-full px-2 py-1 border border-sand rounded-sm text-xs bg-white"
                     />
                   </div>
                 </div>
@@ -670,11 +742,11 @@ export const TripDetails: React.FC = () => {
                 {/* Option to link activity */}
                 {itemStopId && (
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Link Associated Activity (Optional)</label>
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Link Associated Activity (Optional)</label>
                     <select
                       value={itemActivityId}
                       onChange={(e) => setItemActivityId(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-sand rounded text-xs bg-white"
+                      className="w-full px-2 py-1.5 border border-sand rounded-sm text-xs bg-white"
                     >
                       <option value="">-- Choose Activity --</option>
                       {trip.stops.find(s => s.id === itemStopId)?.activities.map(a => (
@@ -685,22 +757,12 @@ export const TripDetails: React.FC = () => {
                 )}
 
                 <div className="flex justify-end pt-1">
-                  <button type="submit" className="bg-teal hover:bg-teal-hover text-paper font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded transition-colors shadow-sm">
-                    Add timeline log
+                  <button type="submit" className="bg-teal hover:bg-teal/95 text-paper font-bold text-[10px] uppercase tracking-wider px-3.5 py-1.5 rounded-sm transition-colors shadow-sm">
+                    Add log event
                   </button>
                 </div>
               </form>
             )}
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center space-x-2 mb-4 mt-4">
-              <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded ${viewMode === 'timeline' ? 'bg-teal text-paper' : 'bg-sand-light text-charcoal-muted hover:text-charcoal'}`}>
-                Timeline
-              </button>
-              <button onClick={() => setViewMode('calendar')} className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded ${viewMode === 'calendar' ? 'bg-teal text-paper' : 'bg-sand-light text-charcoal-muted hover:text-charcoal'}`}>
-                Calendar
-              </button>
-            </div>
 
             {/* Timeline Scheduler logs */}
             {viewMode === 'calendar' && trip ? (
@@ -708,35 +770,42 @@ export const TripDetails: React.FC = () => {
             ) : trip.itineraryItems.length === 0 ? (
               <p className="text-charcoal-muted text-xs py-8 text-center">No schedule events logged. Set up stops and add daily logs.</p>
             ) : (
-              <div className="relative border-l border-sand pl-4 ml-2.5 space-y-6 py-2">
+              <div className="relative border-l border-sand/80 pl-4 ml-2 space-y-4 py-1">
                 {trip.itineraryItems.map((item) => (
-                  <div key={item.id} className="relative space-y-2 animate-fadeIn bg-white border border-sand p-4 rounded-xl shadow-sm hover:border-teal/30 transition-colors">
+                  <div key={item.id} className="relative space-y-2 bg-white border border-sand p-3.5 rounded-xl hover:border-teal/30 hover:shadow-sm transition-all duration-300">
                     
                     {/* Circle marker */}
-                    <span className="absolute -left-[21px] top-4.5 bg-paper h-2 w-2 rounded-full border-2 border-teal ring-4 ring-paper" />
+                    <span className={`absolute -left-[23.5px] top-[18px] h-2.5 w-2.5 rounded-full border-2 ring-4 ring-paper ${
+                      item.activity?.category ? getCategoryColor(item.activity.category).split(' ')[0] : 'border-charcoal-muted bg-charcoal-muted'
+                    }`} />
                     
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <span className="text-[9px] text-coral font-extrabold uppercase bg-sand-light px-2 py-0.5 rounded border border-sand">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <span className="text-[8.5px] text-charcoal font-bold uppercase bg-sand-light px-2 py-0.5 rounded-sm border border-sand/65 font-sans leading-none block w-max">
                           {new Date(item.itineraryDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                         </span>
                         <h3 className="font-bold text-charcoal text-sm leading-snug">{item.title}</h3>
                       </div>
                       <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="text-gray-400 hover:text-coral p-0.5"
+                        onClick={() => {
+                          if (window.confirm('Delete this itinerary item?')) {
+                            handleDeleteItem(item.id);
+                          }
+                        }}
+                        className="text-gray-400 hover:text-coral transition-colors p-0.5 shrink-0"
+                        aria-label="Delete timeline item"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
 
                     {item.description && (
-                      <p className="text-charcoal-muted text-xs leading-relaxed">{item.description}</p>
+                      <p className="text-charcoal-muted text-xs leading-relaxed font-sans font-normal">{item.description}</p>
                     )}
 
                     {(item.startTime || item.endTime) && (
-                      <div className="flex items-center space-x-1.5 text-[9px] text-charcoal-muted font-bold bg-sand-light/50 p-1.5 rounded w-max border border-sand/40">
-                        <Clock className="h-3.5 w-3.5 text-teal shrink-0" />
+                      <div className="flex items-center space-x-1 text-[8.5px] text-charcoal-muted font-bold font-sans bg-paper/60 px-1.5 py-1 rounded-sm w-max border border-sand/40 mt-1">
+                        <Clock className="h-3 w-3 text-teal shrink-0" />
                         <span>
                           {item.startTime ? item.startTime.substring(0, 5) : '00:00'} - {item.endTime ? item.endTime.substring(0, 5) : '23:59'}
                         </span>
@@ -750,37 +819,37 @@ export const TripDetails: React.FC = () => {
           </div>
         </section>
 
-        {/* Right Column: Cost Splitting Tracker (Span 3) */}
-        <section className="lg:col-span-3 space-y-6">
+        {/* Right Column: Expenses Summary and Ledger */}
+        <section className="space-y-5 md:col-span-2 lg:col-span-1">
           
           {/* budget aggregations card */}
           <BudgetBreakdown tripId={trip.id} refreshTrigger={breakdownRefresh} />
 
           {/* Expenses ledger list */}
-          <div className="bg-paper border border-sand p-6 rounded-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-sand pb-3">
-              <h2 className="text-base font-bold text-charcoal flex items-center space-x-2">
-                <DollarSign className="h-4.5 w-4.5 text-teal" />
-                <span className="font-editorial font-bold text-lg text-charcoal">Expenses Ledger</span>
+          <div className="bg-surface border border-sand p-4 md:p-5 rounded-2xl space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
+            <div className="flex items-center justify-between border-b border-sand pb-2">
+              <h2 className="font-editorial text-lg font-bold text-charcoal flex items-center gap-1.5">
+                <span>💰</span>
+                <span>Expenses Ledger</span>
               </h2>
               <button
                 onClick={() => setShowExpenseForm(!showExpenseForm)}
-                className="text-teal hover:text-teal-hover hover:bg-sand-light p-1 rounded-md transition-colors"
+                className="text-teal hover:text-coral transition-colors p-1"
+                aria-label="Add Expense"
               >
-                <Plus className="h-4.5 w-4.5" />
+                <Plus className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Log Expense Form */}
+            {/* Add Expense Form */}
             {showExpenseForm && (
-              <form onSubmit={handleAddExpense} className="bg-sand-light/50 p-4 rounded-lg border border-sand space-y-3 animate-fadeIn">
+              <form onSubmit={handleAddExpense} className="bg-sand-light/50 p-4 rounded-xl border border-sand space-y-3 animate-fadeIn font-sans">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Category</label>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Category</label>
                   <select
-                    required
                     value={expCategory}
                     onChange={(e) => setExpCategory(e.target.value as any)}
-                    className="w-full px-2 py-1.5 border border-sand rounded text-xs bg-white"
+                    className="w-full px-2 py-1.5 border border-sand rounded-sm text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                   >
                     <option value="transport">Transport</option>
                     <option value="stay">Stay</option>
@@ -790,28 +859,28 @@ export const TripDetails: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Amount (₹)</label>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Amount (₹)</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. 50.00"
+                    placeholder="e.g. 500.00"
                     value={expAmount}
                     onChange={(e) => setExpAmount(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                    className="w-full px-2.5 py-1.5 border border-sand rounded-sm text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Description (Optional)</label>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Description (Optional)</label>
                   <input
                     type="text"
-                    placeholder="e.g. Train ticket to Paris"
+                    placeholder="e.g. Train ticket to Jaipur"
                     value={expDesc}
                     onChange={(e) => setExpDesc(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                    className="w-full px-2.5 py-1.5 border border-sand rounded-sm text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                   />
                 </div>
                 <div className="flex justify-end pt-1">
-                  <button type="submit" className="bg-teal hover:bg-teal-hover text-paper font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded transition-colors shadow-sm">
+                  <button type="submit" className="bg-teal hover:bg-teal/95 text-paper font-bold text-[10px] uppercase tracking-wider px-3.5 py-1.5 rounded-sm transition-colors shadow-sm">
                     Log Expense
                   </button>
                 </div>
@@ -824,17 +893,22 @@ export const TripDetails: React.FC = () => {
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {trip.expenses.map((exp) => (
-                  <div key={exp.id} className="flex items-center justify-between border border-sand rounded-lg p-2.5 bg-white text-xs gap-1.5 hover:border-teal/20 hover:shadow-sm transition-all animate-fadeIn">
-                    <div className="space-y-0.5 truncate">
-                      <span className="text-[9px] uppercase font-bold text-coral">{exp.category}</span>
-                      <p className="font-semibold text-charcoal truncate">{exp.description || 'Logged expense'}</p>
+                  <div key={exp.id} className="flex items-center justify-between border border-sand/60 rounded-xl p-2.5 bg-white text-xs gap-1.5 hover:border-teal/20 hover:shadow-sm transition-all duration-150 animate-fadeIn">
+                    <div className="space-y-0.5 truncate min-w-0">
+                      <span className="text-[8px] uppercase font-bold text-coral bg-sand-light/50 border border-sand/40 px-1.5 py-0.5 rounded-sm block w-max leading-none">{exp.category}</span>
+                      <p className="font-semibold text-charcoal truncate mt-1 leading-snug">{exp.description || 'Logged expense'}</p>
                     </div>
                     
                     <div className="flex items-center space-x-2 shrink-0">
-                      <span className="font-bold text-charcoal">{formatCurrency(exp.amount)}</span>
+                      <span className="font-bold text-charcoal font-sans">{formatCurrency(exp.amount)}</span>
                       <button
-                        onClick={() => handleDeleteExpense(exp.id)}
+                        onClick={() => {
+                          if (window.confirm('Delete this expense log?')) {
+                            handleDeleteExpense(exp.id);
+                          }
+                        }}
                         className="text-gray-400 hover:text-coral p-0.5 rounded hover:bg-sand-light transition-colors"
+                        aria-label="Delete Expense"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

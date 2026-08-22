@@ -123,7 +123,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {error && (
-              <div className="bg-coral/5 border-l-2 border-coral text-coral p-3 rounded text-xs animate-fadeIn">
+              <div className="bg-coral/5 border-l-2 border-coral text-coral p-3 rounded-sm text-xs animate-fadeIn">
                 <span>{error}</span>
               </div>
             )}
@@ -137,7 +137,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
               <p className="text-center text-charcoal-muted text-xs py-12">No activities found. Try searching for sightseeing or food.</p>
             ) : (
               activities.map((act) => (
-                <div key={act.id} className="border border-sand rounded-xl overflow-hidden bg-white hover:border-teal/30 hover:shadow-sm transition-all flex flex-col">
+                <div key={act.id} className="border border-sand rounded-sm overflow-hidden bg-white hover:border-teal/30 hover:shadow-sm transition-all flex flex-col">
                   {/* Thumbnail Banner */}
                   <div className="h-28 overflow-hidden relative">
                     <img 
@@ -146,7 +146,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
                       className="w-full h-full object-cover grayscale-[15%]" 
                        onError={(event) => { event.currentTarget.src = getDestinationImage(''); }}
                     />
-                    <span className="absolute top-2 right-2 text-[9px] bg-paper/95 backdrop-blur-sm text-teal font-extrabold uppercase px-2 py-0.5 rounded border border-sand tracking-wider">
+                    <span className="absolute top-2 right-2 text-[9px] bg-paper/95 backdrop-blur-sm text-teal font-extrabold uppercase px-2 py-0.5 rounded-sm border border-sand tracking-wider">
                       {act.category}
                     </span>
                   </div>
@@ -157,13 +157,13 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
                       <p className="text-charcoal-muted text-[11px] leading-relaxed">{act.description}</p>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-charcoal-muted bg-sand-light/65 p-2.5 rounded-lg border border-sand/40">
+                    <div className="flex items-center justify-between text-xs text-charcoal-muted bg-sand-light/65 p-2.5 rounded-sm border border-sand/40">
                       <div className="flex items-center space-x-3 text-[10px] font-bold">
                         <span className="flex items-center space-x-0.5">
                           <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                           <span>{act.durationMinutes}m</span>
                         </span>
-                        <span className="flex items-center space-x-0.5 text-green-700">
+                        <span className="flex items-center space-x-0.5 text-green-700 font-sans font-bold">
                           <span>{formatCurrency(act.estimatedCost)}</span>
                         </span>
                       </div>
@@ -171,7 +171,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
                       <button
                         onClick={() => handleAttach(act)}
                         disabled={attachingId !== null}
-                        className="bg-teal hover:bg-teal-hover disabled:opacity-50 text-paper rounded px-3 py-1 font-bold text-[10px] uppercase tracking-wider flex items-center space-x-1 transition-colors shadow-sm"
+                        className="bg-teal hover:bg-teal-hover disabled:opacity-50 text-paper rounded-sm px-3 py-1 font-bold text-[10px] uppercase tracking-wider flex items-center space-x-1 transition-colors shadow-sm"
                       >
                         {attachingId === act.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Compass, LogOut, User, Settings as SettingsIcon, Shield, Search, Users, Plus } from 'lucide-react';
+import { Compass, LogOut, User, Shield, Menu, X } from 'lucide-react';
 
 /**
  * Top Navbar component styled with a premium editorial travel brand design.
@@ -9,63 +9,142 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const userName = localStorage.getItem('userName') || 'Traveler';
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
+    localStorage.removeItem('isAdmin');
     navigate('/login');
   };
 
+  const navLinks = [
+    { href: '/explore', label: 'Explore' },
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/settings', label: 'Settings' }
+  ];
+
   return (
-    <nav className="bg-paper/95 border-b border-sand text-charcoal sticky top-0 z-30 backdrop-blur-md">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12">
-        <div className="flex items-center justify-between min-h-16 gap-6">
+    <nav className="bg-surface/95 border-b border-sand text-charcoal sticky top-0 z-55 backdrop-blur-md transition-all">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           
-          <Link to="/dashboard" className="flex items-center space-x-2 text-teal font-editorial font-bold text-lg tracking-tight">
-            <Compass className="h-5.5 w-5.5 text-coral" />
-            <span>TripPilot</span>
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-1.5 text-teal font-editorial font-bold text-lg sm:text-xl tracking-tight hover:opacity-90 transition-opacity">
+            <Compass className="h-4.5 w-4.5 sm:h-5.5 sm:w-5.5 text-coral" />
+            <span className="font-editorial italic font-normal text-teal">Trip</span>
+            <span className="font-editorial font-bold -ml-1">Pilot</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-6 mr-auto ml-8">
-            {[{ href: '/explore', label: 'Explore', icon: Search }, { href: '/trips', label: 'Trips', icon: Users }, { href: '/trips/new', label: 'Planner', icon: Plus }].map(({ href, label, icon: Icon }) => <Link key={href} to={href} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors ${location.pathname === href ? 'text-teal' : 'text-charcoal-muted hover:text-teal'}`}><Icon className="h-3.5 w-3.5" /><span>{label}</span></Link>)}
+          {/* Navigation Links (Desktop) */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navLinks.map(({ href, label }) => (
+              <Link 
+                key={href} 
+                to={href} 
+                className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                  location.pathname === href 
+                    ? 'text-teal border-b border-teal pb-0.5' 
+                    : 'text-charcoal-muted hover:text-teal'
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link to="/community" className="hidden lg:flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.16em] text-charcoal-muted hover:text-teal" title="Community trips"><Users className="h-3.5 w-3.5" /><span>Discover</span></Link>
-            <div className="flex items-center space-x-1.5 bg-sand-light border border-sand px-3 py-1.5 rounded-sm text-xs font-semibold text-charcoal-muted">
-              <User className="h-4 w-4 text-teal" />
-              <span className="hidden sm:inline">Hi, {userName}</span>
+
+          {/* Actions (Desktop) */}
+          <div className="hidden md:flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-2 px-2.5 py-1.5 bg-paper/60 border border-sand rounded-sm text-[10px] font-bold uppercase tracking-wider text-charcoal-muted">
+              <User className="h-3.5 w-3.5 text-teal shrink-0" />
+              <span>Hi, {userName}</span>
             </div>
 
-            <Link
-              to="/settings"
-              className="p-2 text-charcoal-muted hover:text-teal hover:bg-sand-light rounded-md transition-colors"
-              title="Profile Settings"
-            >
-              <SettingsIcon className="h-4 w-4" />
-            </Link>
-
             {localStorage.getItem('isAdmin') === 'true' && (
-              <Link to="/admin" className="flex items-center space-x-1 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:text-teal">
-                <Shield className="h-4 w-4" />
+              <Link 
+                to="/admin" 
+                className={`flex items-center space-x-1 border border-sand hover:border-teal px-2.5 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                  location.pathname === '/admin' ? 'text-teal border-teal/20 bg-paper/30' : 'text-charcoal-muted hover:bg-paper/30'
+                }`}
+              >
+                <Shield className="h-3.5 w-3.5 text-teal shrink-0" />
                 <span>Admin</span>
               </Link>
             )}
             
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1 border border-sand hover:border-coral hover:text-coral px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors"
+              className="flex items-center space-x-1 border border-sand hover:border-coral hover:text-coral px-2.5 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all hover:bg-paper/40"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
               <span>Logout</span>
             </button>
           </div>
+
+          {/* Hamburger Menu Toggle (Mobile Only) */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-charcoal hover:text-teal p-1.5 hover:bg-paper rounded-sm transition-colors focus:outline-none"
+              aria-label="Toggle navigation menu"
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+
         </div>
       </div>
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-sand bg-paper/95 backdrop-blur-md px-4 py-2" aria-label="Mobile navigation">
-        <div className="mx-auto flex max-w-md items-center justify-around">
-          {[{ href: '/explore', label: 'Explore', icon: Search }, { href: '/trips', label: 'Trips', icon: Users }, { href: '/trips/new', label: 'Plan', icon: Plus }, { href: '/profile', label: 'Profile', icon: User }].map(({ href, label, icon: Icon }) => <Link key={href} to={href} className={`flex min-w-16 flex-col items-center gap-1 py-1 text-[9px] font-bold uppercase tracking-wider ${location.pathname === href ? 'text-teal' : 'text-charcoal-muted'}`}><Icon className="h-4 w-4" /><span>{label}</span></Link>)}
+
+      {/* Mobile Dropdown Panel */}
+      {isOpen && (
+        <div className="md:hidden border-t border-sand bg-surface/98 flex flex-col p-4 space-y-3 font-sans shadow-lg animate-fadeIn">
+          <div className="flex items-center space-x-2 px-2.5 py-2 bg-paper/60 border border-sand rounded-sm text-[11px] font-bold uppercase tracking-wider text-charcoal-muted">
+            <User className="h-4 w-4 text-teal shrink-0" />
+            <span>Hi, {userName}</span>
+          </div>
+
+          {navLinks.map(({ href, label }) => (
+            <Link
+              key={href}
+              to={href}
+              onClick={() => setIsOpen(false)}
+              className={`px-3 py-2.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-colors border ${
+                location.pathname === href
+                  ? 'text-teal border-teal/20 bg-paper'
+                  : 'text-charcoal-muted border-transparent hover:text-teal hover:bg-paper/40'
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+
+          {localStorage.getItem('isAdmin') === 'true' && (
+            <Link
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center space-x-1.5 px-3 py-2.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-colors border ${
+                location.pathname === '/admin'
+                  ? 'text-teal border-teal/20 bg-paper'
+                  : 'text-charcoal-muted border-transparent hover:text-teal hover:bg-paper/40'
+              }`}
+            >
+              <Shield className="h-3.5 w-3.5 text-teal shrink-0" />
+              <span>Admin Panel</span>
+            </Link>
+          )}
+
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              handleLogout();
+            }}
+            className="flex items-center space-x-1.5 border border-sand hover:border-coral hover:text-coral px-3 py-2.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all hover:bg-paper/40 text-charcoal-muted"
+          >
+            <LogOut className="h-3.5 w-3.5 shrink-0" />
+            <span>Logout</span>
+          </button>
         </div>
-      </div>
+      )}
     </nav>
   );
 };
