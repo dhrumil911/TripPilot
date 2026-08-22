@@ -93,22 +93,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ startDate, endDate, 
   const stopColors = ['bg-teal', 'bg-coral', 'bg-sand']; // and text-white or text-charcoal accordingly
 
   return (
-    <div className="bg-paper border border-sand rounded-xl p-4 font-sans">
+    <div className="bg-surface border border-sand rounded-sm p-5 font-sans">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-editorial text-lg text-charcoal font-bold">
           {currentMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
         </h3>
         <div className="flex space-x-2">
-          <button onClick={prevMonth} className="p-1.5 rounded hover:bg-sand-light text-charcoal transition-colors">
+          <button onClick={prevMonth} className="p-1.5 rounded-sm hover:bg-paper text-charcoal transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <button onClick={nextMonth} className="p-1.5 rounded hover:bg-sand-light text-charcoal transition-colors">
+          <button onClick={nextMonth} className="p-1.5 rounded-sm hover:bg-paper text-charcoal transition-colors">
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-1.5 mb-2">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
           <div key={day} className="text-center text-[10px] font-bold uppercase tracking-wider text-charcoal-muted py-2">
             {day}
@@ -116,7 +116,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ startDate, endDate, 
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {calendarDays.map((date, index) => {
           if (!date) {
             return <div key={`empty-${index}`} className="h-24 bg-transparent"></div>;
@@ -143,47 +143,47 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ startDate, endDate, 
                 }
               }}
               className={`
-                h-24 p-1 rounded-lg border flex flex-col relative
-                ${isWithinTrip ? 'bg-white border-sand' : 'bg-paper/50 border-transparent text-charcoal-muted/40'}
+                h-24 p-1.5 rounded-sm border flex flex-col relative
+                ${isWithinTrip ? 'bg-white border-sand' : 'bg-paper/40 border-transparent text-charcoal-muted/30'}
                 ${isToday ? 'ring-2 ring-coral border-transparent' : ''}
                 ${hasItems ? 'cursor-pointer hover:border-teal/30' : ''}
                 overflow-hidden transition-all
               `}
             >
               <div className="flex justify-between items-start mb-1">
-                <span className={`text-xs font-semibold ${!isWithinTrip ? 'opacity-50' : ''} ${isToday ? 'text-coral' : 'text-charcoal'}`}>
+                <span className={`text-[10px] font-bold ${!isWithinTrip ? 'opacity-40' : ''} ${isToday ? 'text-coral' : 'text-charcoal'}`}>
                   {date.getDate()}
                 </span>
                 {stop && isWithinTrip && (
-                  <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider truncate max-w-[60%] ${stopColorClass}`}>
+                  <span className={`text-[8px] px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider truncate max-w-[65%] leading-none ${stopColorClass}`}>
                     {stop.cityName}
                   </span>
                 )}
               </div>
 
-              <div className="flex-1 flex flex-col gap-0.5 overflow-hidden">
+              <div className="flex-1 flex flex-col gap-1 overflow-hidden mt-1">
                 {dayItems.slice(0, 2).map(item => (
-                  <div key={item.id} className="text-[9px] bg-sand-light text-charcoal px-1 py-0.5 rounded truncate">
+                  <div key={item.id} className="text-[9px] bg-paper text-charcoal px-1.5 py-0.5 rounded-sm truncate leading-none">
                     {item.title}
                   </div>
                 ))}
                 {dayItems.length > 2 && (
-                  <div className="text-[9px] text-teal font-semibold px-1">
+                  <div className="text-[9px] text-teal font-bold px-1 mt-0.5">
                     +{dayItems.length - 2} more
                   </div>
                 )}
               </div>
 
               {expandedDay === dateStr && (
-                <div className="absolute top-full left-0 mt-1 z-10 w-48 bg-white border border-sand rounded shadow-lg p-2 max-h-48 overflow-y-auto">
-                  <div className="text-[10px] font-bold text-charcoal-muted uppercase mb-2 border-b border-sand pb-1">
+                <div className="absolute top-full left-0 mt-1.5 z-20 w-48 bg-white border border-sand rounded-sm shadow-xl p-3 max-h-48 overflow-y-auto">
+                  <div className="text-[9px] font-extrabold text-charcoal-muted uppercase mb-2 border-b border-sand pb-1 font-sans">
                     {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </div>
                   <div className="space-y-2">
                     {dayItems.map(item => (
                       <div key={item.id} className="text-xs">
                         <div className="font-semibold text-charcoal">{item.title}</div>
-                        {item.startTime && <div className="text-[10px] text-teal">{item.startTime} {item.endTime ? `- ${item.endTime}` : ''}</div>}
+                        {item.startTime && <div className="text-[9px] text-teal font-bold font-sans mt-0.5">{item.startTime} {item.endTime ? `- ${item.endTime}` : ''}</div>}
                       </div>
                     ))}
                   </div>
@@ -195,8 +195,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ startDate, endDate, 
       </div>
       
       {itineraryItems.length === 0 && (
-         <div className="text-center mt-4 pb-2">
-           <p className="text-xs text-charcoal-muted">No itinerary items scheduled yet.</p>
+         <div className="text-center mt-6 pb-2">
+           <p className="text-xs text-charcoal-muted font-sans font-normal">No itinerary items scheduled yet.</p>
          </div>
       )}
     </div>

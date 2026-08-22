@@ -7,23 +7,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        paper: '#F8F5EF',
+        paper: 'var(--background)',
+        surface: 'var(--surface)',
         charcoal: {
-          DEFAULT: '#171717',
-          muted: '#6B7280',
+          DEFAULT: 'var(--text-primary)',
+          muted: 'var(--text-secondary)',
         },
         teal: {
-          DEFAULT: '#173F32',
-          hover: '#0F2D24',
+          DEFAULT: 'var(--primary)',
+          hover: 'var(--primary)',
         },
         sand: {
-          DEFAULT: '#DDD7CE',
-          light: '#F3EEE7',
+          DEFAULT: 'var(--border)',
+          light: 'var(--surface-muted)',
         },
         coral: {
-          DEFAULT: '#D76545',
-          hover: '#B95235',
-        }
+          DEFAULT: 'var(--accent)',
+          hover: 'var(--accent)',
+        },
+        'warm-gray': 'var(--text-secondary)',
+        'deep-forest': 'var(--primary)',
       },
       fontFamily: {
         editorial: ['"Playfair Display"', 'Georgia', 'serif'],

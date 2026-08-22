@@ -132,6 +132,9 @@ export const getTrip = async (req: Request, res: Response) => {
         expenses: true,
         itineraryItems: {
           orderBy: (items, { asc }) => [asc(items.itineraryDate), asc(items.sortOrder)],
+          with: {
+            activity: true,
+          }
         }
       }
     });

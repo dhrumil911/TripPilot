@@ -5,6 +5,7 @@ import { db } from '../db';
 import { activities } from '../db/schema';
 
 // Curated discovery catalog until cities become a persisted backend resource.
+// Curated discovery catalog until cities become a persisted backend resource.
 const CITY_CATALOG = [
   { id: 'c1', cityName: 'Udaipur', country: 'India', popularity: 'High', costIndex: 'Moderate' },
   { id: 'c2', cityName: 'Jaipur', country: 'India', popularity: 'High', costIndex: 'Moderate' },
@@ -13,11 +14,11 @@ const CITY_CATALOG = [
   { id: 'c5', cityName: 'Mumbai', country: 'India', popularity: 'High', costIndex: 'Premium' },
   { id: 'c6', cityName: 'Ahmedabad', country: 'India', popularity: 'Medium', costIndex: 'Moderate' },
   { id: 'c7', cityName: 'Goa', country: 'India', popularity: 'High', costIndex: 'Premium' },
-  { id: 'c8', cityName: 'Paris', country: 'France', popularity: 'High', costIndex: 'Premium' },
-  { id: 'c9', cityName: 'Tokyo', country: 'Japan', popularity: 'High', costIndex: 'Premium' },
-  { id: 'c10', cityName: 'Rome', country: 'Italy', popularity: 'Medium', costIndex: 'Premium' },
-  { id: 'c11', cityName: 'New York', country: 'United States', popularity: 'High', costIndex: 'Premium' },
-  { id: 'c12', cityName: 'Cape Town', country: 'South Africa', popularity: 'Medium', costIndex: 'Premium' },
+  { id: 'c8', cityName: 'Agra', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c9', cityName: 'Varanasi', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c10', cityName: 'Amritsar', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c11', cityName: 'Jodhpur', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c12', cityName: 'Jaisalmer', country: 'India', popularity: 'Medium', costIndex: 'Moderate' },
 ];
 
 const CITY_RECOMMENDATIONS: Record<string, Array<{ id: string; name: string; description: string; category: string; estimatedCost: string; durationMinutes: number }>> = {
@@ -34,15 +35,35 @@ const CITY_RECOMMENDATIONS: Record<string, Array<{ id: string; name: string; des
   c4: [{ id: 'kochi-fort', name: 'Fort Kochi heritage walk', description: 'Trace the layered history of Kochi on foot.', category: 'culture', estimatedCost: '600.00', durationMinutes: 120 }],
   c5: [{ id: 'mumbai-marine-drive', name: 'Marine Drive sunset', description: 'Take in the city lights along Mumbai’s waterfront.', category: 'sightseeing', estimatedCost: '0.00', durationMinutes: 90 }],
   c7: [{ id: 'goa-anjuna', name: 'Anjuna beach sunset', description: 'Slow down by the coast and catch Goa’s evening light.', category: 'sightseeing', estimatedCost: '0.00', durationMinutes: 120 }],
+  c8: [
+    { id: 'agra-taj-mahal', name: 'Taj Mahal sunrise tour', description: 'Watch the sunrise paint the marble white palace in pink hues.', category: 'sightseeing', estimatedCost: '1100.00', durationMinutes: 180 },
+    { id: 'agra-fort', name: 'Agra Fort walk', description: 'Walk through the massive red sandstone walls enclosing royal quarters.', category: 'culture', estimatedCost: '600.00', durationMinutes: 120 },
+  ],
+  c9: [
+    { id: 'varanasi-ganga-aarti', name: 'Ganges Ganga Aarti', description: 'Witness the grand spiritual fire ceremony of lights at Dashashwamedh Ghat.', category: 'culture', estimatedCost: '200.00', durationMinutes: 90 },
+    { id: 'varanasi-sarnath', name: 'Sarnath ancient ruins', description: 'Explore where Lord Buddha gave his first sermon.', category: 'sightseeing', estimatedCost: '300.00', durationMinutes: 150 },
+  ],
+  c10: [
+    { id: 'amritsar-golden-temple', name: 'Golden Temple visit', description: 'Join local devotees in prayer at the holy Harmandir Sahib.', category: 'culture', estimatedCost: '0.00', durationMinutes: 120 },
+    { id: 'amritsar-wagah-border', name: 'Wagah Border parade', description: 'Attend the high-energy military flag lowering ceremony.', category: 'sightseeing', estimatedCost: '150.00', durationMinutes: 180 },
+  ],
+  c11: [
+    { id: 'jodhpur-mehrangarh', name: 'Mehrangarh Fort tour', description: 'Explore one of India’s largest and best-preserved fort complexes.', category: 'culture', estimatedCost: '600.00', durationMinutes: 150 },
+    { id: 'jodhpur-blue-streets', name: 'Blue City walk', description: 'Wander the narrow streets with bright blue houses surrounding the fort.', category: 'sightseeing', estimatedCost: '250.00', durationMinutes: 120 },
+  ],
+  c12: [
+    { id: 'jaisalmer-safari', name: 'Sam Sand Dunes safari', description: 'Ride camels over sand dunes and enjoy desert camp music.', category: 'sightseeing', estimatedCost: '1500.00', durationMinutes: 240 },
+    { id: 'jaisalmer-fort', name: 'Golden Jaisalmer Fort tour', description: 'Walk inside the living fort where thousands of residents reside.', category: 'culture', estimatedCost: '300.00', durationMinutes: 150 },
+  ],
 };
 
 const MOCK_ACTIVITIES = [
-  { id: 'a1', name: 'Eiffel Tower Sightseeing', description: 'Enjoy spectacular views from the Eiffel Tower.', category: 'sightseeing', estimatedCost: '45.00', durationMinutes: 120 },
-  { id: 'a2', name: 'Louvre Museum Tour', description: 'Explore works of art, including the Mona Lisa.', category: 'museum', estimatedCost: '30.00', durationMinutes: 180 },
-  { id: 'a3', name: 'Sushi Making Workshop', description: 'Learn how to make authentic sushi with a master chef.', category: 'food', estimatedCost: '75.00', durationMinutes: 150 },
-  { id: 'a4', name: 'Shibuya Sky Observatory', description: 'Panoramic views over Shibuya Crossing.', category: 'sightseeing', estimatedCost: '20.00', durationMinutes: 90 },
-  { id: 'a5', name: 'Colosseum Guided Tour', description: 'Walk through Roman history.', category: 'sightseeing', estimatedCost: '35.00', durationMinutes: 120 },
-  { id: 'a6', name: 'Authentic Pasta Making Class', description: 'Make fresh handmade pasta in Rome.', category: 'food', estimatedCost: '60.00', durationMinutes: 180 },
+  { id: 'a1', name: 'Amber Fort Elephant Ride', description: 'Enjoy spectacular views of the fort lake.', category: 'sightseeing', estimatedCost: '2000.00', durationMinutes: 120 },
+  { id: 'a2', name: 'Taj Mahal Sunrise Tour', description: 'Explore the Taj Mahal with a local historian.', category: 'sightseeing', estimatedCost: '1100.00', durationMinutes: 180 },
+  { id: 'a3', name: 'Ganges River Evening Prayer', description: 'Watch the sacred Ganga Aarti ceremony from a boat.', category: 'food', estimatedCost: '500.00', durationMinutes: 150 },
+  { id: 'a4', name: 'Golden Temple Kitchen Service', description: 'Volunteer at the langar community kitchen serving thousands.', category: 'sightseeing', estimatedCost: '0.00', durationMinutes: 90 },
+  { id: 'a5', name: 'Fort Kochi Spice Market Tour', description: 'Explore local historical warehouses and spice shops.', category: 'sightseeing', estimatedCost: '600.00', durationMinutes: 120 },
+  { id: 'a6', name: 'Gateway of India Yacht Ride', description: 'Sail off the coast of South Mumbai.', category: 'food', estimatedCost: '1500.00', durationMinutes: 180 },
 ];
 
 const activitySchema = z.object({

@@ -105,7 +105,10 @@ export const getPublicTrip = async (req: Request, res: Response) => {
           }
         },
         itineraryItems: {
-          orderBy: (items, { asc }) => [asc(items.itineraryDate), asc(items.sortOrder)]
+          orderBy: (items, { asc }) => [asc(items.itineraryDate), asc(items.sortOrder)],
+          with: {
+            activity: true
+          }
         },
         expenses: true
       }
