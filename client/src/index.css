@@ -2,19 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --tp-ivory: #F8F5EF;
+  --tp-paper: #F3EEE7;
+  --tp-forest: #173F32;
+  --tp-sage: #6F8F7A;
+  --tp-terracotta: #D76545;
+  --tp-ink: #171717;
+  --tp-muted: #6B7280;
+  --tp-border: #DDD7CE;
+}
+
 @layer base {
   body {
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #FAF7F2; /* paper background */
-    color: #1C1C1C; /* charcoal text */
+    background-color: var(--tp-ivory);
+    background-image: linear-gradient(90deg, rgba(23, 63, 50, 0.018) 1px, transparent 1px);
+    background-size: 72px 72px;
+    color: var(--tp-ink);
   }
 
   /* Custom input styling for editorial design */
   input, textarea, select {
-    @apply border border-sand bg-white/50 focus:border-teal focus:ring-1 focus:ring-teal/30 focus:outline-none transition-all;
+    @apply border border-sand bg-white/70 focus:border-teal focus:ring-1 focus:ring-teal/30 focus:outline-none transition-all;
+    border-radius: 2px;
+  }
+
+  .label {
+    @apply mb-1 block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted;
+  }
+
+  .field {
+    @apply w-full border border-sand bg-white px-3 py-2.5 text-sm transition-colors focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal/30;
+    border-radius: 2px;
+  }
+
+  button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--tp-terracotta); outline-offset: 3px; }
+
+  @media (max-width: 767px) {
+    body { padding-bottom: 58px; }
   }
 }
 
@@ -41,5 +71,5 @@
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #D5C9BC;
+  background: #BEB4A8;
 }

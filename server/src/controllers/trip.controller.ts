@@ -84,7 +84,14 @@ export const listTrips = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const userTrips = await db.select().from(trips).where(eq(trips.userId, userId));
+    const userTrips = await db.query.trips.findMany({
+      where: (trip, { eq }) => eq(trip.userId, userId),
+      with: {
+        stops: {
+          orderBy: (stop, { asc }) => [asc(stop.stopOrder)],
+        },
+      },
+    });
 
     return res.status(200).json({
       success: true,

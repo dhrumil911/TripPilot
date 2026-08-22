@@ -1,16 +1,177 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Compass, ArrowRight, MapPin, Sparkles, DollarSign } from 'lucide-react';
+import { Compass, ArrowRight, MapPin, Sparkles } from 'lucide-react';
+import api from '../api/axios';
+import { DestinationCard } from '../components/DestinationCard';
+import { Destination } from '../types/destination';
+import { enrichDestination, getDestinationImage } from '../data/destinations';
+import { formatCurrency } from '../utils/currency';
+import { RouteVisualizer, RouteStop } from '../components/RouteVisualizer';
+
+interface Recommendation {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  estimatedCost: string;
+  durationMinutes: number;
+}
+
+interface CatalogActivity {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  estimatedCost: string;
+  durationMinutes: number;
+}
+
+interface LandingTrip {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  stops?: Array<{ id: string; cityName: string; country: string; startDate: string; endDate: string; stopOrder: number; activities?: Array<{ id: string; name: string }> }>;
+}
 
 export const Landing: React.FC = () => {
   const navigate = useNavigate();
   const isLoggedIn = localStorage.getItem('token') !== null;
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [destinationLoading, setDestinationLoading] = useState(true);
+  const [destinationError, setDestinationError] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [destinationCountry, setDestinationCountry] = useState('all');
+  const [destinationSort, setDestinationSort] = useState<'name' | 'popularity'>('popularity');
+  const [cityQuery, setCityQuery] = useState('');
+  const [selectedCity, setSelectedCity] = useState<Destination | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [selectedRecommendationIds, setSelectedRecommendationIds] = useState<string[]>([]);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState('');
+  const [upcomingTrips, setUpcomingTrips] = useState<LandingTrip[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [planningPrompt, setPlanningPrompt] = useState('');
+  const cityInputRef = useRef<HTMLInputElement>(null);
+  const [activityQuery, setActivityQuery] = useState('');
+  const [activities, setActivities] = useState<CatalogActivity[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState('');
+  const [selectedStopId, setSelectedStopId] = useState('');
+  const [attachingActivityId, setAttachingActivityId] = useState<string | null>(null);
+  const [activitySuccess, setActivitySuccess] = useState('');
+
+  useEffect(() => {
+    api.get('/search/cities')
+      .then((response) => {
+        const cities = (response.data.cities || []).map((city: { id: string; cityName: string; country: string; popularity: string }) => enrichDestination({
+          id: city.id,
+          city: city.cityName,
+          country: city.country,
+          popularity: city.popularity,
+        }));
+        setDestinations(cities);
+      })
+      .catch(() => setDestinationError('Destinations are unavailable right now.'))
+      .finally(() => setDestinationLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const fetchUpcomingTrips = () => {
+      setUpcomingLoading(true);
+      api.get('/trips').then((response) => setUpcomingTrips(response.data.trips || [])).catch(() => setUpcomingTrips([])).finally(() => setUpcomingLoading(false));
+    };
+    fetchUpcomingTrips();
+    window.addEventListener('focus', fetchUpcomingTrips);
+    return () => window.removeEventListener('focus', fetchUpcomingTrips);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!selectedCity) return;
+    setRecommendationLoading(true);
+    setRecommendationError('');
+    api.get(`/search/cities/${selectedCity.id}/recommendations`)
+      .then((response) => setRecommendations(response.data.recommendations || []))
+      .catch(() => setRecommendationError('Recommendations are unavailable right now.'))
+      .finally(() => setRecommendationLoading(false));
+  }, [selectedCity]);
+
+  const selectCity = (destination: Destination) => {
+    setSelectedCity(destination);
+    setCityQuery(destination.city);
+    setSelectedRecommendationIds([]);
+    const matchingStop = upcomingTrips.flatMap((trip) => trip.stops || []).find((stop) => stop.cityName.trim().toLocaleLowerCase() === destination.city.trim().toLocaleLowerCase());
+    if (matchingStop) setSelectedStopId(matchingStop.id);
+  };
+
+  const planSelectedCity = () => {
+    if (!selectedCity) return;
+    const recommendationQuery = selectedRecommendationIds.length ? `&recommendations=${selectedRecommendationIds.join(',')}` : '';
+    const target = `/trips/new?destination=${encodeURIComponent(selectedCity.city)}${recommendationQuery}`;
+    navigate(isLoggedIn ? target : `/register?destination=${encodeURIComponent(selectedCity.city)}${recommendationQuery}`);
+  };
+
+  const matchingCities = destinations.filter((destination) => `${destination.city} ${destination.country}`.toLocaleLowerCase().includes(cityQuery.trim().toLocaleLowerCase()));
+  const upcomingStops = upcomingTrips.flatMap((trip) => (trip.stops || []).map((stop) => ({ ...stop, tripId: trip.id }))).filter((stop) => new Date(stop.endDate) >= new Date()).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const routeStops = [...(upcomingTrips[0]?.stops || [])].sort((a, b) => a.stopOrder - b.stopOrder);
+  const selectedStop = routeStops.find((stop) => stop.id === selectedStopId) || routeStops[0];
+  const heroCity = selectedCity?.city || upcomingStops[0]?.cityName || destinations[0]?.city || '';
+  const heroCountry = selectedCity?.country || upcomingStops[0]?.country || destinations[0]?.country || '';
+  const featuredRoute = routeStops.map((stop) => stop.cityName);
+  const visibleDestinations = destinations
+    .filter((destination) => `${destination.city} ${destination.country}`.toLocaleLowerCase().includes(destinationSearch.trim().toLocaleLowerCase()))
+    .filter((destination) => destinationCountry === 'all' || destination.country === destinationCountry)
+    .sort((a, b) => destinationSort === 'name' ? a.city.localeCompare(b.city) : (a.popularity || '').localeCompare(b.popularity || ''));
+  const previousTrips = upcomingTrips.filter((trip) => new Date(trip.endDate) < new Date());
 
   const handleStartPlanning = () => {
-    if (isLoggedIn) {
-      navigate('/dashboard');
-    } else {
-      navigate('/register');
+    if (!selectedCity) {
+      setPlanningPrompt('Choose a destination to start planning.');
+      cityInputRef.current?.focus();
+      return;
+    }
+    planSelectedCity();
+  };
+
+  useEffect(() => {
+    if (selectedStop && !selectedStopId) setSelectedStopId(selectedStop.id);
+  }, [selectedStop?.id, selectedStopId]);
+
+  useEffect(() => {
+    const city = selectedCity?.city || selectedStop?.cityName;
+    if (!city) {
+      setActivities([]);
+      return;
+    }
+    const matchedCity = destinations.find((destination) => destination.city.toLocaleLowerCase() === city.toLocaleLowerCase());
+    if (!matchedCity) return;
+    setActivityLoading(true);
+    setActivityError('');
+    api.get(`/search/cities/${matchedCity.id}/recommendations`)
+      .then((response) => setActivities(response.data.recommendations || []))
+      .catch(() => setActivityError('We could not load activities right now.'))
+      .finally(() => setActivityLoading(false));
+  }, [destinations, selectedCity?.city, selectedStop?.id, selectedStop?.cityName]);
+
+  const visibleActivities = activities.filter((activity) => `${activity.name} ${activity.category} ${activity.description}`.toLocaleLowerCase().includes(activityQuery.trim().toLocaleLowerCase()));
+
+  const addActivityToStop = async (activity: CatalogActivity) => {
+    if (!selectedStop) {
+      setActivityError('Add a destination to your trip before adding activities.');
+      return;
+    }
+    setAttachingActivityId(activity.id);
+    setActivityError('');
+    setActivitySuccess('');
+    try {
+      const response = await api.post(`/stops/${selectedStop.id}/activities`, activity);
+      setUpcomingTrips((currentTrips) => currentTrips.map((trip) => ({ ...trip, stops: trip.stops?.map((stop) => stop.id === selectedStop.id ? { ...stop, activities: [...(stop.activities || []), response.data.activity] } : stop) })));
+      setActivitySuccess(`${activity.name} added to ${selectedStop.cityName}.`);
+    } catch (error: any) {
+      setActivityError(error.response?.data?.message || 'We could not add that activity.');
+    } finally {
+      setAttachingActivityId(null);
     }
   };
 
@@ -92,13 +253,17 @@ export const Landing: React.FC = () => {
                 <span>Featured Route</span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 text-sm font-bold">
-                <span>Ahmedabad</span>
-                <span className="text-gray-400">&rarr;</span>
-                <span>Mumbai</span>
-                <span className="text-gray-400">&rarr;</span>
-                <span>Goa</span>
-                <span className="mx-2 text-sand">&middot;</span>
-                <span className="text-charcoal-muted font-normal text-xs">7 days &middot; 3 stops &middot; $350 est.</span>
+                {featuredRoute.length > 0 ? featuredRoute.map((city, index) => <React.Fragment key={`${city}-${index}`}><span>{city}</span>{index < featuredRoute.length - 1 && <span className="text-gray-400">&rarr;</span>}</React.Fragment>) : <span className="text-charcoal-muted font-normal text-xs">Choose a route from the destination guide below.</span>}
+              </div>
+            </div>
+
+            <div className="max-w-xl space-y-3">
+              <label htmlFor="landing-city" className="text-[10px] font-extrabold uppercase tracking-widest text-coral">Where are you going?</label>
+              <div className="relative">
+                <input ref={cityInputRef} id="landing-city" value={cityQuery} onChange={(event) => { setCityQuery(event.target.value); setPlanningPrompt(''); }} placeholder="Search a city" className="field" />
+                {planningPrompt && <p role="alert" className="mt-2 text-xs text-coral">{planningPrompt}</p>}
+                {cityQuery && matchingCities.length > 0 && <div className="absolute z-10 mt-1 w-full border border-sand bg-paper shadow-md">{matchingCities.slice(0, 5).map((destination) => <button type="button" key={destination.id} onClick={() => selectCity(destination)} className="flex w-full items-center gap-3 border-b border-sand px-3 py-2 text-left last:border-0 hover:bg-sand-light"><img src={destination.imageUrl || getDestinationImage(destination.city)} alt="" className="h-9 w-12 object-cover" onError={(event) => { event.currentTarget.src = getDestinationImage(''); }} /><span className="text-xs font-bold">{destination.city}, {destination.country}</span></button>)}</div>}
+                {cityQuery && !matchingCities.length && <p className="absolute z-10 mt-1 w-full border border-sand bg-paper p-3 text-xs text-charcoal-muted shadow-md">No destinations found.</p>}
               </div>
             </div>
           </div>
@@ -109,9 +274,10 @@ export const Landing: React.FC = () => {
               {/* Main Visual Image */}
               <div className="absolute inset-6 rounded-xl overflow-hidden shadow-lg border border-sand">
                 <img
-                  src="https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=600&q=80"
-                  alt="Taj Mahal Palace, India"
+                  src={getDestinationImage(heroCity)}
+                  alt={heroCity ? `${heroCity}, ${heroCountry}` : 'Travel destination'}
                   className="w-full h-full object-cover grayscale-[20%] hover:scale-105 transition-transform duration-700"
+                   onError={(event) => { event.currentTarget.src = getDestinationImage(''); }}
                 />
               </div>
 
@@ -121,26 +287,35 @@ export const Landing: React.FC = () => {
                   <MapPin className="h-3 w-3 shrink-0" />
                   <span>Next Stop</span>
                 </div>
-                <h4 className="font-bold text-xs">Colaba, Mumbai</h4>
-                <p className="text-[10px] text-gray-500">Day 3 &middot; Gateway Heritage Tour</p>
+                <h4 className="font-bold text-xs">{selectedCity?.city || destinations[1]?.city || 'Your next stop'}</h4>
+                <p className="text-[10px] text-gray-500">A place worth making time for</p>
               </div>
 
               {/* Float Overlay 2 */}
               <div className="absolute -bottom-4 -right-4 bg-paper border border-sand p-3.5 rounded-lg shadow-md max-w-[160px] space-y-1">
                 <div className="flex items-center space-x-1 text-teal font-bold text-[10px] uppercase tracking-wider">
-                  <DollarSign className="h-3 w-3 text-green-700 shrink-0" />
+                  <span className="h-3 w-3 text-green-700 shrink-0">₹</span>
                   <span>Category splits</span>
                 </div>
                 <div className="w-full bg-sand-light h-1.5 rounded-full overflow-hidden">
                   <div className="bg-teal h-full w-[45%]" />
                 </div>
-                <p className="text-[9px] text-gray-400">Meals & Stay: 65%</p>
+                <p className="text-[9px] text-gray-400">Track every category as you travel</p>
               </div>
             </div>
           </div>
 
         </div>
       </section>
+
+      <section className="border-b border-sand px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl grid gap-8 lg:grid-cols-[1fr_1.4fr]">
+          <div><span className="text-[10px] font-extrabold uppercase tracking-widest text-coral">Planning, made personal</span><h2 className="mt-2 text-3xl font-editorial font-bold">{selectedCity ? `Recommended for ${selectedCity.city}` : 'Choose a city to begin'}</h2><p className="mt-2 text-xs text-charcoal-muted">{selectedCity ? 'Keep the places that fit your journey. We will carry them into your new trip.' : 'Search above or choose a destination card to see places worth stopping for.'}</p></div>
+          <div>{!selectedCity ? <p className="border border-dashed border-sand p-8 text-center text-xs text-charcoal-muted">Select a destination to load recommendations.</p> : recommendationLoading ? <p className="p-8 text-xs text-charcoal-muted">Finding places worth stopping for...</p> : recommendationError ? <p role="alert" className="p-8 text-xs text-coral">{recommendationError}</p> : recommendations.length === 0 ? <p className="p-8 text-xs text-charcoal-muted">No recommendations found for this city yet.</p> : <div className="space-y-2">{recommendations.map((recommendation) => { const selected = selectedRecommendationIds.includes(recommendation.id); return <div key={recommendation.id} className={`flex items-center justify-between gap-4 border p-3 ${selected ? 'border-teal bg-sand-light' : 'border-sand bg-paper'}`}><div className="min-w-0"><p className="font-bold text-sm">{recommendation.name}</p><p className="text-[11px] text-charcoal-muted">{recommendation.category} · {recommendation.durationMinutes} min · {formatCurrency(recommendation.estimatedCost)}</p><p className="mt-1 text-xs text-charcoal-muted">{recommendation.description}</p></div><button type="button" onClick={() => setSelectedRecommendationIds((current) => selected ? current.filter((id) => id !== recommendation.id) : [...current, recommendation.id])} className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-teal">{selected ? 'Remove' : 'Add to trip'}</button></div>})}<button type="button" onClick={planSelectedCity} className="mt-3 bg-teal px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-paper hover:bg-teal-hover">Plan {selectedCity.city}</button></div>}</div>
+        </div>
+      </section>
+
+      <section className="px-4 py-12 sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl"><span className="text-[10px] font-extrabold uppercase tracking-widest text-coral">Your journey</span><h2 className="mt-2 text-3xl font-editorial font-bold">Upcoming stops</h2>{!isLoggedIn || upcomingStops.length === 0 ? <div className="mt-5 border border-dashed border-sand p-8 text-center text-xs text-charcoal-muted">Your next adventure starts here. <button type="button" onClick={handleStartPlanning} className="ml-1 font-bold text-teal hover:text-coral">Plan a trip →</button></div> : <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{upcomingStops.slice(0, 4).map((stop) => <Link key={`${stop.tripId}-${stop.id}`} to={`/trips/${stop.tripId}`} className="flex items-center gap-3 border border-sand bg-paper p-3 hover:border-teal"><img src={getDestinationImage(stop.cityName)} alt="" className="h-12 w-16 shrink-0 object-cover" onError={(event) => { event.currentTarget.src = getDestinationImage(''); }} /><div className="min-w-0"><p className="truncate font-bold text-sm">{stop.cityName}, {stop.country}</p><p className="text-[11px] text-charcoal-muted">{new Date(stop.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(stop.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p></div></Link>)}</div>}</div></section>
 
       {/* 3. Sample Journey Route Visual Preview */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 bg-sand-light border-y border-sand">
@@ -151,48 +326,7 @@ export const Landing: React.FC = () => {
             <p className="text-charcoal-muted text-xs">TripPilot translates linear lists into beautiful step-by-step route timelines.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
-            {[
-              { 
-                city: 'Ahmedabad', 
-                day: 'Day 1 - 2', 
-                info: 'Sabarmati Ashram & Heritage Walk', 
-                cost: '$80', 
-                img: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=300&q=80' 
-              },
-              { 
-                city: 'Mumbai', 
-                day: 'Day 3 - 5', 
-                info: 'Colaba, Marine Drive & Food Tour', 
-                cost: '$180', 
-                img: 'https://images.unsplash.com/photo-1566552881560-0be862a7c445?auto=format&fit=crop&w=300&q=80' 
-              },
-              { 
-                city: 'Goa', 
-                day: 'Day 6 - 7', 
-                info: 'Anjuna Beach Sunset & Seafood', 
-                cost: '$90', 
-                img: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=300&q=80' 
-              },
-            ].map((stop, i) => (
-              <div key={i} className="bg-paper border border-sand rounded-xl p-5 space-y-4 hover:shadow-md transition-shadow relative">
-                <div className="absolute top-5 right-5 bg-sand-light text-[10px] font-black rounded-full h-6 w-6 flex items-center justify-center border border-sand">
-                  0{i + 1}
-                </div>
-                <div className="h-32 rounded-lg overflow-hidden border border-sand">
-                  <img src={stop.img} alt={stop.city} className="w-full h-full object-cover grayscale-[10%]" />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-coral font-extrabold uppercase">{stop.day}</span>
-                    <span className="text-xs font-bold text-green-700">{stop.cost}</span>
-                  </div>
-                  <h3 className="text-lg font-bold">{stop.city}</h3>
-                  <p className="text-xs text-charcoal-muted">{stop.info}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <RouteVisualizer stops={routeStops as RouteStop[]} loading={isLoggedIn && upcomingLoading} />
         </div>
       </section>
 
@@ -209,22 +343,25 @@ export const Landing: React.FC = () => {
             </p>
           </div>
           <div className="lg:col-span-7 bg-sand-light p-6 rounded-xl border border-sand">
-            {/* Mock UX component */}
             <div className="bg-paper p-4 rounded-lg shadow-sm border border-sand space-y-3 max-w-md mx-auto">
-              <div className="flex items-center justify-between border-b border-sand pb-2">
+              <div className="flex items-center justify-between border-b border-sand pb-2 gap-3">
                 <span className="text-xs font-bold text-teal flex items-center space-x-1">
                   <Sparkles className="h-3.5 w-3.5 text-orange-500" />
                   <span>Activity Selector Catalog</span>
                 </span>
-                <span className="text-[10px] text-gray-400">24 results</span>
+                <span className="text-[10px] text-gray-400 shrink-0">{activityLoading ? 'Loading...' : `${visibleActivities.length} results`}</span>
               </div>
-              <div className="border border-sand rounded p-3 flex justify-between items-center text-xs">
-                <div>
-                  <h5 className="font-bold">Gateway Heritage Tour</h5>
-                  <p className="text-[10px] text-gray-400">Culture &middot; 120 mins</p>
-                </div>
-                <button className="bg-teal text-paper px-2.5 py-1 rounded text-[10px] font-bold">Add to stop</button>
+              <div className="flex items-center gap-2">
+                <label htmlFor="landing-stop" className="text-[10px] font-bold uppercase tracking-wider text-charcoal-muted shrink-0">Add activity to</label>
+                <select id="landing-stop" value={selectedStop?.id || ''} onChange={(event) => setSelectedStopId(event.target.value)} disabled={!routeStops.length} className="min-w-0 flex-1 rounded border border-sand bg-white px-2 py-1 text-xs">
+                  {!routeStops.length && <option value="">Select a trip stop</option>}
+                  {routeStops.map((stop) => <option key={stop.id} value={stop.id}>{stop.cityName}, {stop.country}</option>)}
+                </select>
               </div>
+              <input aria-label="Search activities" value={activityQuery} onChange={(event) => setActivityQuery(event.target.value)} placeholder={selectedStop ? `Search ${selectedStop.cityName} activities` : 'Search activities'} className="w-full rounded border border-sand px-2.5 py-1.5 text-xs" />
+              {activitySuccess && <p className="text-[10px] text-green-700" role="status">{activitySuccess}</p>}
+              {activityError && <p className="text-[10px] text-coral" role="alert">{activityError}</p>}
+              {activityLoading ? <div className="space-y-2"><div className="h-12 animate-pulse rounded border border-sand bg-sand-light" /><div className="h-12 animate-pulse rounded border border-sand bg-sand-light" /></div> : visibleActivities.length === 0 ? <p className="border border-dashed border-sand p-4 text-center text-[10px] text-charcoal-muted">{selectedStop ? 'No activities found for this destination.' : 'Select a trip stop to browse activities.'}</p> : <div className="space-y-2">{visibleActivities.slice(0, 3).map((activity) => <div key={activity.id} className="border border-sand rounded p-3 flex justify-between items-center gap-3 text-xs"><div className="min-w-0"><h5 className="font-bold truncate">{activity.name}</h5><p className="text-[10px] text-gray-400">{activity.category} · {activity.durationMinutes} min · {formatCurrency(activity.estimatedCost)}</p></div><button onClick={() => addActivityToStop(activity)} disabled={!selectedStop || attachingActivityId !== null} className="bg-teal text-paper px-2.5 py-1 rounded text-[10px] font-bold shrink-0 disabled:opacity-50">{attachingActivityId === activity.id ? 'Adding...' : 'Add to stop'}</button></div>)}</div>}
             </div>
           </div>
         </div>
@@ -240,20 +377,7 @@ export const Landing: React.FC = () => {
           </div>
           <div className="lg:col-span-7 bg-sand-light p-6 rounded-xl border border-sand">
             <div className="bg-paper p-4 rounded-lg shadow-sm border border-sand space-y-2 max-w-md mx-auto text-xs">
-              <div className="flex items-center justify-between bg-gray-50 border border-sand p-2.5 rounded">
-                <div className="flex items-center space-x-2">
-                  <span className="font-black text-gray-400">01</span>
-                  <span className="font-bold">Ahmedabad, Gujarat</span>
-                </div>
-                <span className="text-[10px] text-gray-400 font-semibold">2 days</span>
-              </div>
-              <div className="flex items-center justify-between bg-gray-50 border border-sand p-2.5 rounded">
-                <div className="flex items-center space-x-2">
-                  <span className="font-black text-gray-400">02</span>
-                  <span className="font-bold">Mumbai, Maharashtra</span>
-                </div>
-                <span className="text-[10px] text-gray-400 font-semibold">3 days</span>
-              </div>
+              {upcomingLoading ? <><div className="h-10 animate-pulse rounded bg-sand-light" /><div className="h-10 animate-pulse rounded bg-sand-light" /></> : routeStops.length === 0 ? <p className="border border-dashed border-sand p-5 text-center text-charcoal-muted">Start designing your journey. Add a destination to begin building your itinerary.</p> : routeStops.map((stop, index) => <div key={stop.id} className="flex items-center justify-between bg-gray-50 border border-sand p-2.5 rounded gap-3"><div className="flex items-center space-x-2 min-w-0"><span className="font-black text-gray-400 shrink-0">{String(index + 1).padStart(2, '0')}</span><span className="font-bold truncate">{stop.cityName}, {stop.country}</span></div><span className="text-[10px] text-gray-400 font-semibold shrink-0">{stop.startDate && stop.endDate ? `${Math.max(1, Math.ceil((new Date(stop.endDate).getTime() - new Date(stop.startDate).getTime()) / 86400000))} days` : 'Dates not set'}</span></div>)}
             </div>
           </div>
         </div>
@@ -271,12 +395,12 @@ export const Landing: React.FC = () => {
             <div className="bg-paper p-5 rounded-lg shadow-sm border border-sand space-y-4 max-w-md mx-auto text-xs">
               <div className="flex justify-between border-b border-sand pb-2 font-bold">
                 <span>Total Spent</span>
-                <span className="text-teal font-extrabold">$350.00 USD</span>
+                <span className="text-teal font-extrabold">Live totals</span>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span>Stay & Lodging</span>
-                  <span>$150.00 (43%)</span>
+                    <span>Category breakdown</span>
                 </div>
                 <div className="w-full bg-sand h-2 rounded-full overflow-hidden">
                   <div className="bg-teal h-full w-[43%]" />
@@ -327,42 +451,15 @@ export const Landing: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
-          {[
-            { city: 'Paris', country: 'France', cost: '$$$$', popularity: '9.8', desc: 'Cafes, Louvre tours, and Seine walk paths.', img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80' },
-            { city: 'Tokyo', country: 'Japan', cost: '$$$', popularity: '9.7', desc: 'Shibuya alleyways, fresh sushi, and temples.', img: 'https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?auto=format&fit=crop&w=400&q=80' },
-            { city: 'Rome', country: 'Italy', cost: '$$$', popularity: '9.5', desc: 'Colosseum ruins, fresh pasta, and monuments.', img: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=400&q=80' },
-            { city: 'New York', country: 'USA', cost: '$$$$', popularity: '9.4', desc: 'Central Park walks, Broadway, and pizza tours.', img: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=400&q=80' },
-          ].map((dest, i) => (
-            <div key={i} className="bg-paper border border-sand rounded-xl overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
-              <div>
-                <div className="h-44 overflow-hidden relative">
-                  <img src={dest.img} alt={dest.city} className="w-full h-full object-cover grayscale-[10%]" />
-                  <div className="absolute top-3 right-3 bg-paper/90 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-black border border-sand text-teal">
-                    ★ {dest.popularity}
-                  </div>
-                </div>
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span>{dest.city}, {dest.country}</span>
-                    <span className="text-green-700">{dest.cost}</span>
-                  </div>
-                  <p className="text-xs text-charcoal-muted leading-relaxed">{dest.desc}</p>
-                </div>
-              </div>
-              <div className="p-4 bg-sand-light border-t border-sand flex justify-end">
-                <button
-                  onClick={handleStartPlanning}
-                  className="text-xs text-teal hover:text-teal-hover font-bold flex items-center space-x-1"
-                >
-                  <span>Plan trip</span>
-                  <span>&rarr;</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        {!destinationLoading && !destinationError && destinations.length > 0 && <div className="flex flex-col gap-3 pt-4 sm:flex-row"><input aria-label="Search destinations" value={destinationSearch} onChange={(event) => setDestinationSearch(event.target.value)} placeholder="Search destinations" className="field" /><select aria-label="Filter destinations by country" value={destinationCountry} onChange={(event) => setDestinationCountry(event.target.value)} className="field sm:max-w-xs"><option value="all">All countries</option>{Array.from(new Set(destinations.map((destination) => destination.country))).sort().map((country) => <option key={country} value={country}>{country}</option>)}</select><select aria-label="Sort destinations" value={destinationSort} onChange={(event) => setDestinationSort(event.target.value as 'name' | 'popularity')} className="field sm:max-w-xs"><option value="popularity">Group by popularity</option><option value="name">Sort by name</option></select></div>}
+        {destinationLoading && <p className="pt-4 text-xs text-charcoal-muted">Loading destinations...</p>}
+        {destinationError && <p role="alert" className="pt-4 text-xs text-coral">{destinationError}</p>}
+        {!destinationLoading && !destinationError && destinations.length === 0 && <p className="pt-4 text-xs text-charcoal-muted">No destinations found.</p>}
+        {!destinationLoading && !destinationError && visibleDestinations.length === 0 && <p className="pt-4 text-xs text-charcoal-muted">No destinations match your search.</p>}
+        {!destinationLoading && !destinationError && visibleDestinations.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">{visibleDestinations.map((destination) => <DestinationCard key={destination.id} destination={destination} onSelect={selectCity} />)}</div>}
       </section>
+
+      {isLoggedIn && <section className="border-t border-sand px-4 py-12 sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl"><span className="text-[10px] font-extrabold uppercase tracking-widest text-coral">Your archive</span><h2 className="mt-2 text-3xl font-editorial font-bold">Previous trips</h2>{previousTrips.length === 0 ? <p className="mt-4 text-xs text-charcoal-muted">Your completed journeys will appear here.</p> : <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{previousTrips.map((trip) => { const stop = trip.stops?.[0]; return <Link key={trip.id} to={`/trips/${trip.id}`} className="flex gap-3 border border-sand bg-paper p-3 hover:border-teal"><img src={getDestinationImage(stop?.cityName)} alt={stop ? `${stop.cityName}, ${stop.country}` : trip.title} className="h-20 w-24 shrink-0 object-cover" /><div className="min-w-0"><h3 className="truncate font-editorial text-lg font-bold">{trip.title}</h3><p className="truncate text-xs text-charcoal-muted">{stop ? `${stop.cityName}, ${stop.country}` : 'Multi-stop journey'}</p><p className="mt-2 text-[10px] text-charcoal-muted">{new Date(trip.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(trip.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p></div></Link>; })}</div>}</div></section>}
 
       {/* 7. Footer */}
       <footer className="border-t border-sand py-12 px-4 sm:px-6 lg:px-8 bg-paper">

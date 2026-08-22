@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, PieChart, Info, RefreshCw } from 'lucide-react';
+import { PieChart, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import api from '../api/axios';
+import { formatCurrency } from '../utils/currency';
 
 interface BudgetBreakdownProps {
   tripId: string;
@@ -97,16 +98,14 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ tripId, refres
             <div>
               <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Total Expenses</span>
               <span className="text-xl font-black text-charcoal flex items-center mt-1">
-                <DollarSign className="h-5 w-5 text-gray-500 -ml-1 shrink-0" />
-                <span>{parseFloat(breakdown.totalSpend).toFixed(0)}</span>
-                <span className="text-[9px] text-charcoal-muted uppercase font-bold ml-1.5">{breakdown.currency}</span>
+                <span>{formatCurrency(breakdown.totalSpend)}</span>
+                <span className="text-[9px] text-charcoal-muted uppercase font-bold ml-1.5">{breakdown.currency || 'INR'}</span>
               </span>
             </div>
             <div>
               <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Average / Day</span>
               <span className="text-xl font-black text-coral flex items-center mt-1">
-                <DollarSign className="h-5 w-5 text-coral/80 -ml-1 shrink-0" />
-                <span>{parseFloat(breakdown.averageCostPerDay).toFixed(0)}</span>
+                <span>{formatCurrency(breakdown.averageCostPerDay)}</span>
                 <span className="text-[9px] text-charcoal-muted uppercase font-bold ml-1.5">/ day</span>
               </span>
             </div>
@@ -126,7 +125,7 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ tripId, refres
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-charcoal-muted">{config.label}</span>
                       <div className="flex items-center space-x-2 font-bold">
-                        <span className="text-charcoal">${parseFloat(value).toFixed(0)}</span>
+                        <span className="text-charcoal">{formatCurrency(value)}</span>
                         <span className="text-gray-400 font-normal">({percent}%)</span>
                       </div>
                     </div>
@@ -140,6 +139,72 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ tripId, refres
                   </div>
                 );
               })}
+            </div>
+
+            {/* Pie Chart & Alerts */}
+            <div className="mt-8 pt-6 border-t border-sand space-y-6">
+              <div className="flex flex-col items-center space-y-4">
+                <h3 className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider self-start">Visual Distribution</h3>
+                
+                {(() => {
+                  const tPct = getPercentage(breakdown.categories.transport, breakdown.totalSpend);
+                  const sPct = getPercentage(breakdown.categories.stay, breakdown.totalSpend);
+                  const aPct = getPercentage(breakdown.categories.activity, breakdown.totalSpend);
+                  const mPct = getPercentage(breakdown.categories.meal, breakdown.totalSpend);
+                  const oPct = getPercentage(breakdown.categories.other, breakdown.totalSpend);
+                  
+                  let conicGradient = '#e5e7eb 0% 100%';
+                  const total = parseFloat(breakdown.totalSpend);
+                  if (total > 0) {
+                    conicGradient = `conic-gradient(
+                      #1B3B2B 0% ${tPct}%, 
+                      #D46241 ${tPct}% ${tPct+sPct}%, 
+                      #8B7355 ${tPct+sPct}% ${tPct+sPct+aPct}%, 
+                      #6B8E6B ${tPct+sPct+aPct}% ${tPct+sPct+aPct+mPct}%, 
+                      #A0A0A0 ${tPct+sPct+aPct+mPct}% 100%
+                    )`;
+                  }
+
+                  return (
+                    <>
+                      <div className="relative">
+                        <div style={{ background: conicGradient, width: 160, height: 160, borderRadius: '50%' }} />
+                        {total === 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-full" style={{ width: 160, height: 160 }}>
+                            <span className="text-xs text-charcoal-muted font-bold">No Data</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {total > 0 && (
+                        <div className="flex flex-wrap justify-center gap-3 text-[10px] font-bold mt-2">
+                          <div className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded-full bg-[#1B3B2B]"></span><span>Transport {tPct}%</span></div>
+                          <div className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded-full bg-[#D46241]"></span><span>Stay {sPct}%</span></div>
+                          <div className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded-full bg-[#8B7355]"></span><span>Activities {aPct}%</span></div>
+                          <div className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded-full bg-[#6B8E6B]"></span><span>Meals {mPct}%</span></div>
+                          <div className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded-full bg-[#A0A0A0]"></span><span>Other {oPct}%</span></div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="space-y-2">
+                {Object.entries(breakdown.categories).map(([key, value]) => {
+                  const percent = getPercentage(value, breakdown.totalSpend);
+                  if (percent > 40) {
+                    const config = categoryConfig[key];
+                    return (
+                      <div key={`alert-${key}`} className="flex items-center space-x-2 bg-amber-50 border-l-2 border-amber-500 text-amber-700 p-3 rounded text-xs mt-3">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>High concentration: <strong>{config.label}</strong> accounts for {percent}% of your budget</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
             </div>
           </div>
         </div>

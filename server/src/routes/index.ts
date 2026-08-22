@@ -9,6 +9,8 @@ import searchRoutes from './search.routes';
 import itineraryRoutes from './itinerary.routes';
 import expenseRoutes from './expense.routes';
 import shareRoutes from './share.routes';
+import adminRoutes from './admin.routes';
+import imageRoutes from './image.routes';
 
 const apiRouter = Router();
 
@@ -23,5 +25,7 @@ apiRouter.use('/search', searchRoutes);
 apiRouter.use('/itineraries', itineraryRoutes);
 apiRouter.use('/expenses', expenseRoutes);
 apiRouter.use('/shared', shareRoutes);
+apiRouter.use('/admin', adminRoutes);
+apiRouter.use('/images', imageRoutes);
 
 export default apiRouter;

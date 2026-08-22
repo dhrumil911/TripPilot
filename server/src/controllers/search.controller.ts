@@ -4,15 +4,37 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { activities } from '../db/schema';
 
-// Mock database lists for cities and activities search
-const MOCK_CITIES = [
-  { id: 'c1', cityName: 'Paris', country: 'France', popularity: 'High', costIndex: '$$$' },
-  { id: 'c2', cityName: 'Tokyo', country: 'Japan', popularity: 'High', costIndex: '$$' },
-  { id: 'c3', cityName: 'Rome', country: 'Italy', popularity: 'Medium', costIndex: '$$$' },
-  { id: 'c4', cityName: 'New York', country: 'United States', popularity: 'High', costIndex: '$$$$' },
-  { id: 'c5', cityName: 'Mumbai', country: 'India', popularity: 'Medium', costIndex: '$' },
-  { id: 'c6', cityName: 'Cape Town', country: 'South Africa', popularity: 'Medium', costIndex: '$$' },
+// Curated discovery catalog until cities become a persisted backend resource.
+const CITY_CATALOG = [
+  { id: 'c1', cityName: 'Udaipur', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c2', cityName: 'Jaipur', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c3', cityName: 'Delhi', country: 'India', popularity: 'High', costIndex: 'Moderate' },
+  { id: 'c4', cityName: 'Kochi', country: 'India', popularity: 'Medium', costIndex: 'Moderate' },
+  { id: 'c5', cityName: 'Mumbai', country: 'India', popularity: 'High', costIndex: 'Premium' },
+  { id: 'c6', cityName: 'Ahmedabad', country: 'India', popularity: 'Medium', costIndex: 'Moderate' },
+  { id: 'c7', cityName: 'Goa', country: 'India', popularity: 'High', costIndex: 'Premium' },
+  { id: 'c8', cityName: 'Paris', country: 'France', popularity: 'High', costIndex: 'Premium' },
+  { id: 'c9', cityName: 'Tokyo', country: 'Japan', popularity: 'High', costIndex: 'Premium' },
+  { id: 'c10', cityName: 'Rome', country: 'Italy', popularity: 'Medium', costIndex: 'Premium' },
+  { id: 'c11', cityName: 'New York', country: 'United States', popularity: 'High', costIndex: 'Premium' },
+  { id: 'c12', cityName: 'Cape Town', country: 'South Africa', popularity: 'Medium', costIndex: 'Premium' },
 ];
+
+const CITY_RECOMMENDATIONS: Record<string, Array<{ id: string; name: string; description: string; category: string; estimatedCost: string; durationMinutes: number }>> = {
+  c1: [
+    { id: 'udaipur-lake-pichola', name: 'Lake Pichola boat ride', description: 'See Udaipur palaces from the water at golden hour.', category: 'sightseeing', estimatedCost: '800.00', durationMinutes: 120 },
+    { id: 'udaipur-city-palace', name: 'City Palace museum', description: 'Walk through the royal history overlooking the lake.', category: 'culture', estimatedCost: '400.00', durationMinutes: 150 },
+  ],
+  c2: [
+    { id: 'jaipur-amber-fort', name: 'Amber Fort', description: 'Explore the hilltop fort and its ornate courtyards.', category: 'culture', estimatedCost: '550.00', durationMinutes: 180 },
+    { id: 'jaipur-hawa-mahal', name: 'Hawa Mahal', description: 'Visit Jaipur’s famous palace of windows in the old city.', category: 'sightseeing', estimatedCost: '200.00', durationMinutes: 90 },
+    { id: 'jaipur-city-palace', name: 'City Palace', description: 'Discover royal galleries and courtyards in the heart of Jaipur.', category: 'culture', estimatedCost: '500.00', durationMinutes: 150 },
+  ],
+  c3: [{ id: 'delhi-old-city', name: 'Old Delhi food walk', description: 'Taste the lanes and kitchens around Chandni Chowk.', category: 'food', estimatedCost: '1200.00', durationMinutes: 180 }],
+  c4: [{ id: 'kochi-fort', name: 'Fort Kochi heritage walk', description: 'Trace the layered history of Kochi on foot.', category: 'culture', estimatedCost: '600.00', durationMinutes: 120 }],
+  c5: [{ id: 'mumbai-marine-drive', name: 'Marine Drive sunset', description: 'Take in the city lights along Mumbai’s waterfront.', category: 'sightseeing', estimatedCost: '0.00', durationMinutes: 90 }],
+  c7: [{ id: 'goa-anjuna', name: 'Anjuna beach sunset', description: 'Slow down by the coast and catch Goa’s evening light.', category: 'sightseeing', estimatedCost: '0.00', durationMinutes: 120 }],
+};
 
 const MOCK_ACTIVITIES = [
   { id: 'a1', name: 'Eiffel Tower Sightseeing', description: 'Enjoy spectacular views from the Eiffel Tower.', category: 'sightseeing', estimatedCost: '45.00', durationMinutes: 120 },
@@ -32,15 +54,15 @@ const activitySchema = z.object({
 });
 
 /**
- * Searches the in-memory mock cities directory
+ * Searches the curated discovery catalog using case-insensitive partial matching.
  */
 export const searchCities = async (req: Request, res: Response) => {
   try {
-    const query = req.query.query ? String(req.query.query).toLowerCase() : '';
+    const query = req.query.query ? String(req.query.query).trim().toLocaleLowerCase() : '';
 
-    const results = MOCK_CITIES.filter(city => 
-      city.cityName.toLowerCase().includes(query) || 
-      city.country.toLowerCase().includes(query)
+    const results = CITY_CATALOG.filter(city =>
+      city.cityName.toLocaleLowerCase().includes(query) ||
+      city.country.toLocaleLowerCase().includes(query)
     );
 
     return res.status(200).json({
@@ -53,12 +75,17 @@ export const searchCities = async (req: Request, res: Response) => {
   }
 };
 
+export const getCityRecommendations = async (req: Request, res: Response) => {
+  const recommendations = CITY_RECOMMENDATIONS[req.params.cityId] || [];
+  return res.status(200).json({ success: true, recommendations });
+};
+
 /**
  * Searches the in-memory mock activities directory
  */
 export const searchActivities = async (req: Request, res: Response) => {
   try {
-    const query = req.query.query ? String(req.query.query).toLowerCase() : '';
+    const query = req.query.query ? String(req.query.query).trim().toLocaleLowerCase() : '';
     const category = req.query.category ? String(req.query.category).toLowerCase() : '';
 
     let results = MOCK_ACTIVITIES;

@@ -1,13 +1,10 @@
 import { Router } from 'express';
-import { searchCities, searchActivities } from '../controllers/search.controller';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { searchCities, searchActivities, getCityRecommendations } from '../controllers/search.controller';
 
 const router = Router();
 
-// Secure search queries using JWT middleware
-router.use(authMiddleware);
-
 router.get('/cities', searchCities);
+router.get('/cities/:cityId/recommendations', getCityRecommendations);
 router.get('/activities', searchActivities);
 
 export default router;

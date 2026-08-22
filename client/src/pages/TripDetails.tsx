@@ -3,11 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { ActivitySelector } from '../components/ActivitySelector';
 import { BudgetBreakdown } from '../components/BudgetBreakdown';
+import { CalendarView } from '../components/CalendarView';
+import { formatCurrency } from '../utils/currency';
 import { 
   Calendar, MapPin, Plus, Trash2, ArrowUp, ArrowDown, Share2, 
   Sparkles, DollarSign, Check, Clock, Eye, AlertCircle 
 } from 'lucide-react';
 import api from '../api/axios';
+import { getDestinationImage } from '../data/destinations';
 
 interface Activity {
   id: string;
@@ -68,6 +71,30 @@ export const TripDetails: React.FC = () => {
   // Shared triggers
   const [copiedLink, setCopiedLink] = useState(false);
   const [breakdownRefresh, setBreakdownRefresh] = useState(0);
+
+  // City Search
+  const [citySearchResults, setCitySearchResults] = useState<Array<{id:string, cityName:string, country:string, popularity:string, costIndex:string}>>([]);
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchCities = (query: string) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (!query.trim()) {
+      setCitySearchResults([]);
+      return;
+    }
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get('/search/cities?query=' + encodeURIComponent(query));
+        setCitySearchResults(res.data.cities);
+      } catch (e) {
+        console.error(e);
+      }
+    }, 300);
+  };
+
+  // Calendar toggle
+  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
 
   // Forms Visibility & Data
   const [showStopForm, setShowStopForm] = useState(false);
@@ -248,7 +275,7 @@ export const TripDetails: React.FC = () => {
         category: expCategory,
         description: expDesc || undefined,
         amount: expAmount,
-        currency: 'USD'
+        currency: 'INR'
       });
 
       setExpDesc('');
@@ -324,6 +351,8 @@ export const TripDetails: React.FC = () => {
 
           {/* Share Controls */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Link to={`/trips/${trip.id}/calendar`} className="flex items-center gap-1.5 border border-sand bg-white px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:border-teal hover:text-teal"><Calendar className="h-3.5 w-3.5" />Calendar</Link>
+            <Link to={`/trips/${trip.id}/budget`} className="flex items-center gap-1.5 border border-sand bg-white px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:border-teal hover:text-teal"><DollarSign className="h-3.5 w-3.5" />Budget</Link>
             <button
               onClick={handleToggleShare}
               className={`flex items-center space-x-1.5 px-3.5 py-2 rounded text-xs font-bold uppercase tracking-wider border transition-colors ${
@@ -337,23 +366,33 @@ export const TripDetails: React.FC = () => {
             </button>
 
             {trip.shareKey && (
-              <div className="flex items-center space-x-2 bg-sand-light border border-sand p-1.5 rounded text-xs">
-                <button
-                  onClick={handleCopyLink}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-teal hover:bg-teal-hover text-paper rounded text-[9px] font-bold uppercase tracking-widest transition-colors"
-                >
-                  {copiedLink ? <Check className="h-3 w-3" /> : null}
-                  <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
-                </button>
-                <a
-                  href={`/shared/${trip.shareKey}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-charcoal-muted hover:text-teal p-1.5 hover:bg-white rounded"
-                  title="View Public Shared Itinerary"
-                >
-                  <Eye className="h-4 w-4" />
-                </a>
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center space-x-2 bg-sand-light border border-sand p-1.5 rounded text-xs">
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-teal hover:bg-teal-hover text-paper rounded text-[9px] font-bold uppercase tracking-widest transition-colors"
+                  >
+                    {copiedLink ? <Check className="h-3 w-3" /> : null}
+                    <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+                  </button>
+                  <a
+                    href={`/shared/${trip.shareKey}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-charcoal-muted hover:text-teal p-1.5 hover:bg-white rounded"
+                    title="View Public Shared Itinerary"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </a>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button onClick={() => window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out my trip: ' + trip.title) + '&url=' + encodeURIComponent(window.location.origin + '/shared/' + trip.shareKey), '_blank')}
+                    className="px-2 py-1 text-[10px] font-bold border border-sand rounded hover:bg-sand-light">Twitter</button>
+                  <button onClick={() => window.open('https://wa.me/?text=' + encodeURIComponent('Check out my trip plan: ' + window.location.origin + '/shared/' + trip.shareKey), '_blank')}
+                    className="px-2 py-1 text-[10px] font-bold border border-sand rounded hover:bg-sand-light">WhatsApp</button>
+                  <button onClick={() => window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.origin + '/shared/' + trip.shareKey), '_blank')}
+                    className="px-2 py-1 text-[10px] font-bold border border-sand rounded hover:bg-sand-light">Facebook</button>
+                </div>
               </div>
             )}
           </div>
@@ -383,16 +422,32 @@ export const TripDetails: React.FC = () => {
             {/* Add Stop Form */}
             {showStopForm && (
               <form onSubmit={handleAddStop} className="bg-sand-light/50 p-4 rounded-lg border border-sand space-y-3 animate-fadeIn">
-                <div>
+                <div className="relative">
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">City Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Paris"
                     value={cityName}
-                    onChange={(e) => setCityName(e.target.value)}
+                    onChange={(e) => {
+                      setCityName(e.target.value);
+                      searchCities(e.target.value);
+                    }}
+                    onFocus={() => { if (citySearchResults.length > 0) setShowCitySuggestions(true); }}
+                    onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
                     className="w-full px-2.5 py-1.5 border border-sand rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                   />
+                  {showCitySuggestions && citySearchResults.length > 0 && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-sand rounded-lg shadow-md max-h-40 overflow-y-auto">
+                      {citySearchResults.map(city => (
+                        <button key={city.id} type="button" onClick={() => { setCityName(city.cityName); setCountry(city.country); setShowCitySuggestions(false); }}
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-sand-light flex justify-between">
+                          <span className="font-medium">{city.cityName}, {city.country}</span>
+                          <span className="text-charcoal-muted">{city.costIndex}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Country</label>
@@ -444,7 +499,9 @@ export const TripDetails: React.FC = () => {
                   <div key={stop.id} className="border border-sand rounded-xl p-4 space-y-3 bg-white hover:border-teal/30 hover:shadow-sm transition-all">
                     
                     <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
+                      <div className="flex min-w-0 items-start gap-3 space-y-1">
+                        <img src={getDestinationImage(stop.cityName)} alt="" className="h-12 w-16 shrink-0 rounded object-cover" onError={(event) => { event.currentTarget.src = getDestinationImage(''); }} />
+                        <div className="min-w-0">
                         <div className="flex items-center space-x-1.5">
                           <span className="bg-sand-light text-teal font-editorial font-bold text-xs rounded-full h-5 w-5 flex items-center justify-center border border-sand">
                             {stop.stopOrder}
@@ -454,6 +511,7 @@ export const TripDetails: React.FC = () => {
                         <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider">
                           {formatDate(stop.startDate)} &mdash; {formatDate(stop.endDate)}
                         </p>
+                        </div>
                       </div>
 
                       {/* Direction controls */}
@@ -501,7 +559,7 @@ export const TripDetails: React.FC = () => {
                           {stop.activities.map((act) => (
                             <div key={act.id} className="flex items-center justify-between bg-sand-light/50 px-2 py-1 rounded text-xs border border-sand/40 gap-1.5">
                               <span className="font-semibold text-charcoal truncate">{act.name}</span>
-                              <span className="text-[9px] text-green-700 font-bold shrink-0">${parseFloat(act.estimatedCost).toFixed(0)}</span>
+                              <span className="text-[9px] text-green-700 font-bold shrink-0">{formatCurrency(act.estimatedCost)}</span>
                             </div>
                           ))}
                         </div>
@@ -528,9 +586,10 @@ export const TripDetails: React.FC = () => {
               {trip.stops.length > 0 && (
                 <button
                   onClick={() => setShowItemForm(!showItemForm)}
-                  className="text-teal hover:text-teal-hover hover:bg-sand-light p-1 rounded-md transition-colors"
+                  className="flex items-center gap-1.5 text-teal hover:text-teal-hover hover:bg-sand-light px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors"
                 >
                   <Plus className="h-4.5 w-4.5" />
+                  <span>Add another Section</span>
                 </button>
               )}
             </div>
@@ -589,7 +648,7 @@ export const TripDetails: React.FC = () => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Start Time</label>
                     <input
-                      type="text"
+                      type="time"
                       placeholder="e.g. 09:30"
                       value={itemStart}
                       onChange={(e) => setItemStart(e.target.value)}
@@ -599,7 +658,7 @@ export const TripDetails: React.FC = () => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">End Time</label>
                     <input
-                      type="text"
+                      type="time"
                       placeholder="e.g. 12:30"
                       value={itemEnd}
                       onChange={(e) => setItemEnd(e.target.value)}
@@ -633,8 +692,20 @@ export const TripDetails: React.FC = () => {
               </form>
             )}
 
+            {/* View Mode Toggle */}
+            <div className="flex items-center space-x-2 mb-4 mt-4">
+              <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded ${viewMode === 'timeline' ? 'bg-teal text-paper' : 'bg-sand-light text-charcoal-muted hover:text-charcoal'}`}>
+                Timeline
+              </button>
+              <button onClick={() => setViewMode('calendar')} className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded ${viewMode === 'calendar' ? 'bg-teal text-paper' : 'bg-sand-light text-charcoal-muted hover:text-charcoal'}`}>
+                Calendar
+              </button>
+            </div>
+
             {/* Timeline Scheduler logs */}
-            {trip.itineraryItems.length === 0 ? (
+            {viewMode === 'calendar' && trip ? (
+              <CalendarView startDate={trip.startDate} endDate={trip.endDate} itineraryItems={trip.itineraryItems} stops={trip.stops} />
+            ) : trip.itineraryItems.length === 0 ? (
               <p className="text-charcoal-muted text-xs py-8 text-center">No schedule events logged. Set up stops and add daily logs.</p>
             ) : (
               <div className="relative border-l border-sand pl-4 ml-2.5 space-y-6 py-2">
@@ -719,7 +790,7 @@ export const TripDetails: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Amount ($)</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-charcoal-muted mb-1">Amount (₹)</label>
                   <input
                     type="text"
                     required
@@ -760,7 +831,7 @@ export const TripDetails: React.FC = () => {
                     </div>
                     
                     <div className="flex items-center space-x-2 shrink-0">
-                      <span className="font-bold text-charcoal">${parseFloat(exp.amount).toFixed(0)}</span>
+                      <span className="font-bold text-charcoal">{formatCurrency(exp.amount)}</span>
                       <button
                         onClick={() => handleDeleteExpense(exp.id)}
                         className="text-gray-400 hover:text-coral p-0.5 rounded hover:bg-sand-light transition-colors"
