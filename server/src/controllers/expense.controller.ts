@@ -10,7 +10,7 @@ const expenseSchema = z.object({
   }),
   description: z.string().optional(),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Amount must be a valid monetary decimal format (e.g. 99.50)'),
-  currency: z.string().min(1, 'Currency is required').default('USD'),
+  currency: z.string().min(1, 'Currency is required').default('INR'),
 });
 
 /**

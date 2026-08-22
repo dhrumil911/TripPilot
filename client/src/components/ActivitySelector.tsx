@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Loader2, Sparkles, Plus, Clock, DollarSign } from 'lucide-react';
+import { Search, X, Loader2, Sparkles, Plus, Clock } from 'lucide-react';
 import api from '../api/axios';
+import { formatCurrency } from '../utils/currency';
+import { getDestinationImage } from '../data/destinations';
 
 interface ActivitySelectorProps {
   stopId: string;
@@ -142,6 +144,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
                       src={getCategoryImage(act.category)} 
                       alt={act.name} 
                       className="w-full h-full object-cover grayscale-[15%]" 
+                       onError={(event) => { event.currentTarget.src = getDestinationImage(''); }}
                     />
                     <span className="absolute top-2 right-2 text-[9px] bg-paper/95 backdrop-blur-sm text-teal font-extrabold uppercase px-2 py-0.5 rounded border border-sand tracking-wider">
                       {act.category}
@@ -161,8 +164,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ stopId, isOp
                           <span>{act.durationMinutes}m</span>
                         </span>
                         <span className="flex items-center space-x-0.5 text-green-700">
-                          <DollarSign className="h-3.5 w-3.5 shrink-0" />
-                          <span>{act.estimatedCost}</span>
+                          <span>{formatCurrency(act.estimatedCost)}</span>
                         </span>
                       </div>
 

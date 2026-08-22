@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  Calendar, MapPin, Compass, DollarSign, Copy, 
+  Calendar, MapPin, Compass, Copy, 
   Loader2, LogIn, AlertCircle, CheckCircle, Clock 
 } from 'lucide-react';
 import api from '../api/axios';
+import { formatCurrency } from '../utils/currency';
+import { getDestinationImage } from '../data/destinations';
 
 interface Activity {
   id: string;
@@ -59,6 +61,7 @@ export const SharedTrip: React.FC = () => {
   const [error, setError] = useState('');
   const [copying, setCopying] = useState(false);
   const [copySuccess, setCopySuccess] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const isLoggedIn = localStorage.getItem('token') !== null;
 
@@ -113,17 +116,6 @@ export const SharedTrip: React.FC = () => {
     return new Date(dateStr).toLocaleDateString(undefined, options);
   };
 
-  const getHeroImage = (id: string) => {
-    const images = [
-      'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=85',
-    ];
-    const sum = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return images[sum % images.length];
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center font-sans text-charcoal">
@@ -150,9 +142,10 @@ export const SharedTrip: React.FC = () => {
       {/* Visual Header Cover Collage */}
       <div className="h-96 w-full relative overflow-hidden border-b border-sand">
         <img 
-          src={getHeroImage(trip.id)} 
+          src={getDestinationImage(trip.stops[0]?.cityName)}
           alt={trip.title} 
           className="w-full h-full object-cover grayscale-[15%]" 
+           onError={(event) => { event.currentTarget.src = getDestinationImage(''); }}
         />
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
         
@@ -197,9 +190,7 @@ export const SharedTrip: React.FC = () => {
             <div>
               <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Estimated Budget</span>
               <span className="text-2xl font-black text-charcoal flex items-center mt-1">
-                <DollarSign className="h-6 w-6 text-gray-400 -ml-1 shrink-0" />
-                <span>{calculateTotal().toFixed(0)}</span>
-                <span className="text-[10px] text-charcoal-muted font-bold uppercase ml-1">USD</span>
+                <span>{formatCurrency(calculateTotal())}</span>
               </span>
             </div>
             <div className="border-l border-sand h-8 hidden sm:block" />
@@ -232,6 +223,22 @@ export const SharedTrip: React.FC = () => {
                 <span>Log in to clone trip</span>
               </Link>
             )}
+            
+            <div className="mt-4 space-y-2">
+              <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider block text-center sm:text-left">Share this trip</span>
+              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
+                <button onClick={() => window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out this travel itinerary: ' + trip.title) + '&url=' + encodeURIComponent(window.location.href), '_blank')}
+                  className="px-3 py-1.5 text-[10px] font-bold border border-sand rounded hover:bg-sand-light transition-colors">Twitter</button>
+                <button onClick={() => window.open('https://wa.me/?text=' + encodeURIComponent('Check out this travel itinerary: ' + trip.title + ' ' + window.location.href), '_blank')}
+                  className="px-3 py-1.5 text-[10px] font-bold border border-sand rounded hover:bg-sand-light transition-colors">WhatsApp</button>
+                <button onClick={() => window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href), '_blank')}
+                  className="px-3 py-1.5 text-[10px] font-bold border border-sand rounded hover:bg-sand-light transition-colors">Facebook</button>
+                <button onClick={() => { navigator.clipboard.writeText(window.location.href); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }}
+                  className="px-3 py-1.5 text-[10px] font-bold border border-sand rounded hover:bg-sand-light transition-colors">
+                  {linkCopied ? '✓ Copied!' : 'Copy Link'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -270,7 +277,7 @@ export const SharedTrip: React.FC = () => {
                           {stop.activities.map((act) => (
                             <div key={act.id} className="flex items-center justify-between text-xs bg-sand-light/40 px-2 py-1 rounded border border-sand/30 gap-1">
                               <span className="font-medium text-charcoal-muted truncate">{act.name}</span>
-                              <span className="text-[9px] text-green-700 font-bold shrink-0">${parseFloat(act.estimatedCost).toFixed(0)}</span>
+                              <span className="text-[9px] text-green-700 font-bold shrink-0">{formatCurrency(act.estimatedCost)}</span>
                             </div>
                           ))}
                         </div>

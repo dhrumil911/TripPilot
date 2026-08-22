@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { 
-  Calendar, MapPin, Trash2, Plus, AlertCircle, 
-  Globe, ArrowRight, Layout, Settings as SettingsIcon, Search, SlidersHorizontal 
+  Calendar, Trash2, Plus, AlertCircle, 
+  Globe, ArrowRight, Layout, Settings as SettingsIcon, Search, SlidersHorizontal, Pencil 
 } from 'lucide-react';
 import api from '../api/axios';
+import { DestinationCard } from '../components/DestinationCard';
+import { Destination } from '../types/destination';
+import { enrichDestination, getDestinationImage } from '../data/destinations';
 
 interface Trip {
   id: string;
@@ -13,6 +16,7 @@ interface Trip {
   description: string | null;
   startDate: string;
   endDate: string;
+  stops?: Array<{ cityName: string; country: string }>;
 }
 
 export const Dashboard: React.FC = () => {
@@ -21,6 +25,17 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
+  // Discover Cities
+  const [recommendedCities, setRecommendedCities] = useState<Destination[]>([]);
+
+  // Edit Trip State
+  const [editingTripId, setEditingTripId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+
   // Search / Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title'>('date-desc');
@@ -31,12 +46,32 @@ export const Dashboard: React.FC = () => {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [destinationInput, setDestinationInput] = useState('');
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
 
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const destinationQuery = searchParams.get('destination');
+
   useEffect(() => {
     fetchTrips();
-  }, []);
+    fetchRecommendedCities();
+    if (destinationQuery) {
+      setDestinationInput(`${destinationQuery}, India`);
+      setTitle(`Trip to ${destinationQuery}`);
+      setShowForm(true);
+    }
+  }, [destinationQuery]);
+
+  const fetchRecommendedCities = async () => {
+    try {
+      const response = await api.get('/search/cities');
+      setRecommendedCities(response.data.cities.map((city: { id: string; cityName: string; country: string; popularity: string }) => enrichDestination({ id: city.id, city: city.cityName, country: city.country, popularity: city.popularity })));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchTrips = async () => {
     setLoading(true);
@@ -74,12 +109,39 @@ export const Dashboard: React.FC = () => {
         endDate
       });
 
-      setTrips([response.data.trip, ...trips]);
+      const newTrip = response.data.trip;
+
+      // Automatically create a stop if a destination is provided
+      if (destinationInput.trim()) {
+        const parts = destinationInput.split(',');
+        const city = parts[0]?.trim() || '';
+        const country = parts[1]?.trim() || 'India';
+        if (city) {
+          try {
+            await api.post(`/trips/${newTrip.id}/stops`, {
+              cityName: city,
+              country: country,
+              startDate,
+              endDate,
+              stopOrder: 1
+            });
+          } catch (stopErr) {
+            console.error('Failed to create initial stop:', stopErr);
+            // Non-blocking error, user can still see the trip itself
+          }
+        }
+      }
+
+      setTrips([newTrip, ...trips]);
       setTitle('');
       setDescription('');
       setStartDate('');
       setEndDate('');
+      setDestinationInput('');
       setShowForm(false);
+
+      // Immediately redirect user to the planning details page
+      navigate(`/trips/${newTrip.id}`);
     } catch (err: any) {
       console.error(err);
       setFormError(err.response?.data?.message || 'Failed to create trip.');
@@ -103,23 +165,33 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleEditSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editingTripId) return;
+    setEditLoading(true);
+    try {
+      await api.patch('/trips/' + editingTripId, {
+        title: editTitle,
+        description: editDescription || undefined,
+        startDate: editStartDate,
+        endDate: editEndDate
+      });
+      setEditingTripId(null);
+      fetchTrips();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to edit trip.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateStr).toLocaleDateString(undefined, options);
   };
 
-  // Cover image hash map helper to generate mock cover visual assets
-  const getCoverImage = (id: string) => {
-    const images = [
-      'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80', // Paris
-      'https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?auto=format&fit=crop&w=400&q=80', // Tokyo
-      'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=400&q=80', // Rome
-      'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=400&q=80', // NY
-    ];
-    // Hash charcode sum to get consistent cover per trip ID
-    const sum = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return images[sum % images.length];
-  };
+  const getCoverImage = (trip: Trip) => getDestinationImage(trip.stops?.[0]?.cityName || trip.title.replace(/^Trip to /i, ''));
 
   // Filtered & Sorted Trips
   const filteredTrips = trips
@@ -133,6 +205,12 @@ export const Dashboard: React.FC = () => {
       if (sortBy === 'date-asc') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
       return a.title.localeCompare(b.title);
     });
+  const today = new Date();
+  const tripGroups = [
+    { label: 'Ongoing', trips: filteredTrips.filter((trip) => new Date(trip.startDate) <= today && new Date(trip.endDate) >= today) },
+    { label: 'Upcoming', trips: filteredTrips.filter((trip) => new Date(trip.startDate) > today) },
+    { label: 'Completed', trips: filteredTrips.filter((trip) => new Date(trip.endDate) < today) },
+  ];
 
   return (
     <div className="min-h-screen bg-paper flex flex-col font-sans">
@@ -176,6 +254,22 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
 
+            <div className="bg-paper border border-sand p-5 rounded-xl space-y-3">
+              <h3 className="font-editorial font-bold text-sm">Discover Cities</h3>
+              {recommendedCities.map((city, idx) => (
+                <div key={idx} className="bg-white border border-sand/50 rounded-lg p-3 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs">{city.city}</span>
+                    <span className="text-[10px] bg-sand px-1.5 py-0.5 rounded text-charcoal-muted font-bold">{city.popularity}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-charcoal-muted">
+                    <span>{city.country}</span>
+                    <span className="font-bold text-green-700">{city.popularity}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
         </aside>
 
@@ -209,6 +303,17 @@ export const Dashboard: React.FC = () => {
                     placeholder="e.g. Summer EuroTrip"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-sand rounded text-xs focus:ring-1 focus:ring-teal"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">Destination (e.g. City, Country)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Udaipur, India"
+                    value={destinationInput}
+                    onChange={(e) => setDestinationInput(e.target.value)}
                     className="w-full px-3 py-2 border border-sand rounded text-xs focus:ring-1 focus:ring-teal"
                   />
                 </div>
@@ -311,52 +416,86 @@ export const Dashboard: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredTrips.map((trip) => (
+              <div className="space-y-8">
+                {tripGroups.map((group) => <section key={group.label} className="space-y-3"><div className="flex items-center justify-between border-b border-sand pb-2"><h2 className="font-editorial text-xl font-bold">{group.label}</h2><span className="text-[10px] font-bold uppercase tracking-wider text-charcoal-muted">{group.trips.length} {group.trips.length === 1 ? 'trip' : 'trips'}</span></div>{group.trips.length === 0 ? <p className="border border-dashed border-sand p-6 text-xs text-charcoal-muted">No {group.label.toLocaleLowerCase()} journeys yet. Start planning your next destination.</p> : <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {group.trips.map((trip) => (
                   <div 
                     key={trip.id} 
-                    onClick={() => navigate(`/trips/${trip.id}`)}
+                    onClick={() => !editingTripId && navigate(`/trips/${trip.id}`)}
                     className="cursor-pointer bg-paper border border-sand rounded-xl overflow-hidden hover:shadow-md hover:border-teal/30 transition-all flex flex-col justify-between"
                   >
-                    <div>
-                      {/* Cover Photo */}
-                      <div className="h-40 overflow-hidden relative">
-                        <img 
-                          src={getCoverImage(trip.id)} 
-                          alt={trip.title} 
-                          className="w-full h-full object-cover grayscale-[10%]" 
-                        />
-                        <button
-                          onClick={(e) => handleDeleteTrip(trip.id, e)}
-                          className="absolute top-3 right-3 text-paper hover:text-coral bg-black bg-opacity-30 hover:bg-opacity-50 p-1.5 rounded transition-all"
-                          title="Delete Journey"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                    {editingTripId === trip.id ? (
+                      <div className="p-4 space-y-3" onClick={e => e.stopPropagation()}>
+                        <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full px-2 py-1 text-sm border" placeholder="Title" />
+                        <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} className="w-full px-2 py-1 text-sm border" placeholder="Description" />
+                        <input type="date" value={editStartDate} onChange={e => setEditStartDate(e.target.value)} className="w-full px-2 py-1 text-sm border" />
+                        <input type="date" value={editEndDate} onChange={e => setEditEndDate(e.target.value)} className="w-full px-2 py-1 text-sm border" />
+                        <div className="flex space-x-2">
+                          <button onClick={handleEditSave} disabled={editLoading} className="bg-teal text-white px-3 py-1 rounded text-xs">Save</button>
+                          <button onClick={() => setEditingTripId(null)} className="bg-sand text-charcoal px-3 py-1 rounded text-xs">Cancel</button>
+                        </div>
                       </div>
+                    ) : (
+                      <>
+                        <div>
+                          {/* Cover Photo */}
+                          <div className="h-40 overflow-hidden relative">
+                            <img 
+                              src={getCoverImage(trip)} 
+                              alt={trip.title} 
+                              className="w-full h-full object-cover grayscale-[10%]" 
+                              onError={(event) => { event.currentTarget.src = getDestinationImage(''); }}
+                            />
+                            <div className="absolute top-3 right-3 flex space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTripId(trip.id);
+                                  setEditTitle(trip.title);
+                                  setEditDescription(trip.description || '');
+                                  setEditStartDate(trip.startDate.split('T')[0]);
+                                  setEditEndDate(trip.endDate.split('T')[0]);
+                                }}
+                                className="text-paper hover:text-teal bg-black bg-opacity-30 hover:bg-opacity-50 p-1.5 rounded transition-all"
+                                title="Edit Journey"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteTrip(trip.id, e)}
+                                className="text-paper hover:text-coral bg-black bg-opacity-30 hover:bg-opacity-50 p-1.5 rounded transition-all"
+                                title="Delete Journey"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
 
-                      <div className="p-6 space-y-2">
-                        <h3 className="font-editorial font-bold text-xl text-charcoal line-clamp-1">{trip.title}</h3>
-                        {trip.description && (
-                          <p className="text-charcoal-muted text-xs line-clamp-2 leading-relaxed">{trip.description}</p>
-                        )}
-                      </div>
-                    </div>
+                          <div className="p-6 space-y-2">
+                            <h3 className="font-editorial font-bold text-xl text-charcoal line-clamp-1">{trip.title}</h3>
+                            {trip.description && (
+                              <p className="text-charcoal-muted text-xs line-clamp-2 leading-relaxed">{trip.description}</p>
+                            )}
+                          </div>
+                        </div>
 
-                    <div className="px-6 py-4 bg-sand-light border-t border-sand flex items-center justify-between">
-                      <div className="flex items-center space-x-1 text-[10px] text-charcoal-muted font-bold">
-                        <Calendar className="h-3.5 w-3.5 text-teal" />
-                        <span>
-                          {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
-                        </span>
-                      </div>
-                      <span className="text-teal hover:text-teal-hover text-xs font-bold uppercase tracking-wider flex items-center space-x-0.5">
-                        <span>Open Details</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
+                        <div className="px-6 py-4 bg-sand-light border-t border-sand flex items-center justify-between">
+                          <div className="flex items-center space-x-1 text-[10px] text-charcoal-muted font-bold">
+                            <Calendar className="h-3.5 w-3.5 text-teal" />
+                            <span>
+                              {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+                            </span>
+                          </div>
+                          <span className="text-teal hover:text-teal-hover text-xs font-bold uppercase tracking-wider flex items-center space-x-0.5">
+                            <span>Open Details</span>
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
+              </div>}</section>)}
               </div>
             )}
           </div>
@@ -368,27 +507,7 @@ export const Dashboard: React.FC = () => {
               <span>Recommended Destinations</span>
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { city: 'Paris', country: 'France', cost: '$$$$', info: 'Eiffel Tower, Louvre Museum' },
-                { city: 'Tokyo', country: 'Japan', cost: '$$$', info: 'Shibuya Sky, Sushi Workshops' },
-                { city: 'Rome', country: 'Italy', cost: '$$$', info: 'Colosseum, Pasta Class' },
-                { city: 'New York', country: 'USA', cost: '$$$$', info: 'Times Square, Central Park' },
-              ].map((dest, i) => (
-                <div key={i} className="bg-paper p-5 rounded-xl border border-sand space-y-3 shadow-sm hover:border-teal/30 hover:shadow-md transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1.5 text-charcoal font-bold text-xs">
-                      <MapPin className="h-4 w-4 text-coral" />
-                      <span>{dest.city}, {dest.country}</span>
-                    </div>
-                    <span className="text-green-700 text-xs font-bold">
-                      {dest.cost}
-                    </span>
-                  </div>
-                  <p className="text-charcoal-muted text-[11px] leading-relaxed">{dest.info}</p>
-                </div>
-              ))}
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">{recommendedCities.map((destination) => <DestinationCard key={destination.id} destination={destination} />)}</div>
           </div>
 
         </main>

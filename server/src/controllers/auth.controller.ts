@@ -20,6 +20,12 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+const resetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  name: z.string().min(1, 'Name is required'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters long'),
+});
+
 /**
  * Handles user registration
  */
@@ -139,7 +145,8 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        isAdmin: user.isAdmin
       }
     });
 
@@ -148,6 +155,52 @@ export const login = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'An error occurred during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection is not available. Please configure DATABASE_URL.'
+      });
+    }
+
+    const parseResult = resetPasswordSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: parseResult.error.errors
+      });
+    }
+
+    const { email, name, newPassword } = parseResult.data;
+
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+    if (!user || user.name.toLowerCase() !== name.toLowerCase()) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account matches these credentials'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.update(users).set({ passwordHash: hashedPassword }).where(eq(users.email, email.toLowerCase()));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successful'
+    });
+
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred during password reset',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
