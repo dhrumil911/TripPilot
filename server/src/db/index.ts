@@ -1,14 +1,15 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import * as schema from './schema';
 
 const databaseUrl = process.env.DATABASE_URL;
 
-export let db: ReturnType<typeof drizzle> | null = null;
+export let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 if (databaseUrl) {
   try {
     const client = postgres(databaseUrl);
-    db = drizzle(client);
+    db = drizzle(client, { schema });
     console.log('✅ Database connection initialized successfully.');
   } catch (error) {
     console.error('❌ Failed to initialize database connection:', error);
