@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Calendar, MapPin, Trash2, Plus, AlertCircle, Compass, Globe, DollarSign } from 'lucide-react';
 import api from '../api/axios';
@@ -12,6 +13,7 @@ interface Trip {
 }
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -248,7 +250,10 @@ export const Dashboard: React.FC = () => {
                   </div>
 
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end">
-                    <button className="text-blue-600 hover:text-blue-700 text-sm font-bold flex items-center space-x-1">
+                    <button
+                      onClick={() => navigate(`/trips/${trip.id}`)}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-bold flex items-center space-x-1"
+                    >
                       <span>Build Itinerary</span>
                       <span>&rarr;</span>
                     </button>
