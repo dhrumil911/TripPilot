@@ -14,6 +14,7 @@ export const trips = pgTable('trips', {
   endDate: date('end_date').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  shareKey: uuid('share_key').unique(),
 }, (table) => ({
   userIdIdx: index('trips_user_id_idx').on(table.userId),
 }));

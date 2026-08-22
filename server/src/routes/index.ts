@@ -6,6 +6,9 @@ import tripRoutes from './trip.routes';
 import stopRoutes from './stop.routes';
 import activityRoutes from './activity.routes';
 import searchRoutes from './search.routes';
+import itineraryRoutes from './itinerary.routes';
+import expenseRoutes from './expense.routes';
+import shareRoutes from './share.routes';
 
 const apiRouter = Router();
 
@@ -17,5 +20,8 @@ apiRouter.use('/trips', tripRoutes);
 apiRouter.use('/stops', stopRoutes);
 apiRouter.use('/activities', activityRoutes);
 apiRouter.use('/search', searchRoutes);
+apiRouter.use('/itineraries', itineraryRoutes);
+apiRouter.use('/expenses', expenseRoutes);
+apiRouter.use('/shared', shareRoutes);
 
 export default apiRouter;
